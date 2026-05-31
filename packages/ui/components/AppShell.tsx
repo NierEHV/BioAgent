@@ -64,52 +64,67 @@ export function AppShell() {
   ], [lang]);
   const displaySections = thinkingSections.length > 0 ? thinkingSections : demoSections;
   const [isThinking, setIsThinking] = useState(false);
-  const [workflowNodes, setWorkflowNodes] = useState<WorkflowNodeState[]>([
-    { nodeId: "import", skill: "data-import", status: "completed", startedAt: new Date().toISOString(), endedAt: new Date().toISOString(), retryCount: 0, error: null },
-    { nodeId: "qc", skill: "scrna-qc", status: "completed", startedAt: new Date().toISOString(), endedAt: new Date().toISOString(), retryCount: 0, error: null },
-    { nodeId: "doublet", skill: "doublet-detection", status: "completed", startedAt: new Date().toISOString(), endedAt: new Date().toISOString(), retryCount: 0, error: null },
-    { nodeId: "normalize", skill: "scrna-normalize", status: "running", startedAt: new Date().toISOString(), endedAt: null, retryCount: 0, error: null },
-    { nodeId: "hvg", skill: "hvg-selection", status: "pending", startedAt: null, endedAt: null, retryCount: 0, error: null },
-    { nodeId: "pca", skill: "scrna-pca", status: "pending", startedAt: null, endedAt: null, retryCount: 0, error: null },
-    { nodeId: "umap", skill: "umap-tsne", status: "pending", startedAt: null, endedAt: null, retryCount: 0, error: null },
-    { nodeId: "cluster", skill: "clustering", status: "pending", startedAt: null, endedAt: null, retryCount: 0, error: null },
-    { nodeId: "annotate", skill: "cell-annotation", status: "pending", startedAt: null, endedAt: null, retryCount: 0, error: null },
-    { nodeId: "marker", skill: "marker-detection", status: "pending", startedAt: null, endedAt: null, retryCount: 0, error: null },
-    { nodeId: "de", skill: "diff-expression", status: "pending", startedAt: null, endedAt: null, retryCount: 0, error: null },
-    { nodeId: "enrich", skill: "functional-enrichment", status: "pending", startedAt: null, endedAt: null, retryCount: 0, error: null },
-  ]);
-  const [workflowProgress, setWorkflowProgress] = useState(0.25);
-  const [workflowRunId, setWorkflowRunId] = useState<string>("demo-run-001");
-  const [qcReports, setQcReports] = useState<Array<{ skillName: string; overall: "pass" | "warn" | "fail"; gates: QCGateData[] }>>([
-    {
-      skillName: "scrna-qc",
-      overall: "warn",
-      gates: [
-        { id: "gene_count", name: "基因数分布", result: "pass", detail: "median: 2,458 genes/cell, IQR: 1,200-3,800", canAutoFix: false },
-        { id: "umi_count", name: "UMI计数", result: "pass", detail: "median: 8,200 UMI/cell, 分布正常", canAutoFix: false },
-        { id: "mito_ratio", name: "线粒体比例", result: "warn", detail: "8.2% 细胞 pctMT > 20%, 建议设阈值20%排除412个细胞", suggestion: "将阈值设为 20%", canAutoFix: true },
-      ],
-    },
-    {
-      skillName: "doublet-detection",
-      overall: "pass",
-      gates: [
-        { id: "doublet_rate", name: "双细胞率", result: "pass", detail: "检出 3.2% 双细胞，在正常范围内 (<15%)", canAutoFix: false },
-        { id: "score_sep", name: "分数分离度", result: "pass", detail: "双细胞/单细胞分数分离良好 (AUC=0.94)", canAutoFix: false },
-      ],
-    },
-  ]);
-  const [visualizations, setVisualizations] = useState<Array<{ type: "umap" | "volcano" | "heatmap" | "dotplot" | "violin"; url: string; metadata: Record<string, unknown> }>>([
-    { type: "umap", url: "", metadata: { description: "UMAP embedding — 12 clusters identified", cells: 45000 } },
-    { type: "volcano", url: "", metadata: { description: "Tumor vs Normal — 342 upregulated, 198 downregulated" } },
-  ]);
-  const [knowledgeRefs, setKnowledgeRefs] = useState<KnowledgeReference[]>([
-    { title: "单细胞QC最佳实践", type: "paper", doi: "10.15252/msb.20188746", relevance: 0.95 },
-    { title: "肺癌→免疫亚群 Marker 关系", type: "database", url: "http://bio-bigdata.hrbmu.edu.cn/CellMarker/", relevance: 0.89 },
-    { title: "肺癌TME免疫抑制亚群鉴定", type: "paper", doi: "10.1038/s41591-020-0901-8", relevance: 0.87 },
-    { title: "Seurat使用心得与最佳实践", type: "docs", relevance: 0.82 },
-  ]);
-  const [knowledgeAnswer, setKnowledgeAnswer] = useState<string>("肺腺癌肿瘤微环境中常见免疫抑制亚群包括: Treg (FOXP3+), 耗竭T细胞 (PD-1+TOX+), MDSC-like巨噬细胞, 耐受性DC。");
+  const [workflowNodes, setWorkflowNodes] = useState<WorkflowNodeState[]>([]);
+  const [workflowProgress, setWorkflowProgress] = useState(0);
+  const [workflowRunId, setWorkflowRunId] = useState<string | null>(null);
+  const [qcReports, setQcReports] = useState<Array<{ skillName: string; overall: "pass" | "warn" | "fail"; gates: QCGateData[] }>>([]);
+  const [visualizations, setVisualizations] = useState<Array<{ type: "umap" | "volcano" | "heatmap" | "dotplot" | "violin"; url: string; metadata: Record<string, unknown> }>>([]);
+  const [knowledgeRefs, setKnowledgeRefs] = useState<KnowledgeReference[]>([]);
+  const [knowledgeAnswer, setKnowledgeAnswer] = useState<string>("");
+  const [knowledgeLoading, setKnowledgeLoading] = useState(false);
+  const [knowledgeError, setKnowledgeError] = useState<string | null>(null);
+
+  // Fetch knowledge from real API when knowledge tab is activated
+  useEffect(() => {
+    if (activeBioTab !== "knowledge" || knowledgeRefs.length > 0) return;
+    setKnowledgeLoading(true);
+    setKnowledgeError(null);
+    fetch("/api/knowledge?question=scRNA-seq best practices")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.references) {
+          setKnowledgeRefs(data.references.map((ref: any) => ({
+            title: ref.title || ref.snippet?.slice(0, 50) || "Untitled",
+            type: ref.type || "docs",
+            doi: ref.doi,
+            url: ref.url,
+            relevance: ref.relevance || 0.7,
+          })));
+        }
+        if (data.answer) setKnowledgeAnswer(data.answer);
+        setKnowledgeLoading(false);
+      })
+      .catch((err) => {
+        setKnowledgeError(err.message);
+        setKnowledgeLoading(false);
+      });
+  }, [activeBioTab, knowledgeRefs.length]);
+
+  // Fetch workflows from real API
+  useEffect(() => {
+    fetch("/api/workflow")
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0 && workflowNodes.length === 0) {
+          const allNodes: WorkflowNodeState[] = [];
+          data.forEach((wf: any) => {
+            (wf.nodes || []).forEach((n: any) => {
+              allNodes.push({
+                nodeId: n.id,
+                skill: n.skill,
+                status: "pending",
+                startedAt: null,
+                endedAt: null,
+                retryCount: 0,
+                error: null,
+              });
+            });
+          });
+          setWorkflowNodes(allNodes);
+        }
+      })
+      .catch(() => {});
+  }, [workflowNodes.length]);
 
   // Refs for GSAP panel animations
   const bioPanelRef = useRef<HTMLDivElement>(null);
@@ -903,8 +918,8 @@ export function AppShell() {
               <KnowledgeRef
                 references={knowledgeRefs}
                 answer={knowledgeAnswer || undefined}
-                isLoading={false}
-                error={null}
+                isLoading={knowledgeLoading}
+                error={knowledgeError}
               />
             )}
           </div>

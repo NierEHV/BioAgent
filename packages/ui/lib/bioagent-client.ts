@@ -265,10 +265,9 @@ export class BioAgentClient {
     question: string,
     context?: Record<string, unknown>
   ): Promise<KnowledgeQueryResult> {
-    return this.request<KnowledgeQueryResult>("/api/knowledge", {
-      method: "GET",
-      body: JSON.stringify({ question, context }),
-    });
+    const params = new URLSearchParams({ question });
+    if (context) params.set("context", JSON.stringify(context));
+    return this.request<KnowledgeQueryResult>(`/api/knowledge?${params.toString()}`);
   }
 
   // ---------------------------------------------------------------------------
