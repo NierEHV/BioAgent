@@ -79,3 +79,21 @@ export { CellAnnotationSkill } from "./annotate/cell-annotation.skill.js";
 export { MarkerDetectionSkill } from "./analysis/marker-detection.skill.js";
 export { DiffExpressionSkill } from "./analysis/diff-expression.skill.js";
 export { FunctionalEnrichmentSkill } from "./analysis/functional-enrichment.skill.js";
+export { TrajectorySkill } from "./analysis/trajectory.skill.js";
+export { CellCommunicationSkill } from "./analysis/cell-communication.skill.js";
+
+// ---------------------------------------------------------------------------
+// P0 Skills — Network
+// ---------------------------------------------------------------------------
+export { GRNSkill } from "./network/grn.skill.js";
+
+// ---------------------------------------------------------------------------
+// P0 Skills — Report
+// ---------------------------------------------------------------------------
+export { ReportGeneratorSkill } from "./report/report-generator.skill.js";
+
+// ---------------------------------------------------------------------------
+// Skill Loader
+// ---------------------------------------------------------------------------
+export { SkillLoader } from "./skill-loader.js";
+export type { SkillLoaderOptions } from "./skill-loader.js";
