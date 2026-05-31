@@ -20,12 +20,11 @@ import type { ChatInputHandle } from "./ChatInput";
 gsap.registerPlugin(useGSAP);
 
 // BioAgent — bioinformatics panel components
-import { ProgressTracker, VizPanel, ResourceMonitor, WorkflowSelector } from "@/components/bioagent";
+import { ProgressTracker, VizPanel, WorkflowSelector } from "@/components/bioagent";
 import QCReportCard, { type QCGateData } from "@/components/bioagent/QCReportCard";
 import ThinkingPanel, { type ThinkingSection } from "@/components/bioagent/ThinkingPanel";
 import KnowledgeRef, { type KnowledgeReference } from "@/components/bioagent/KnowledgeRef";
 import type { WorkflowNodeState } from "@/hooks/useWorkflow";
-import type { ResourceStatus } from "@/lib/bioagent-client";
 
 export function AppShell() {
   const router = useRouter();
@@ -49,7 +48,7 @@ export function AppShell() {
   // BioAgent — right-side bioinformatics panel state
   // ---------------------------------------------------------------------------
   const [bioPanelOpen, setBioPanelOpen] = useState(true);
-  const [activeBioTab, setActiveBioTab] = useState<"thinking" | "progress" | "qc" | "viz" | "knowledge" | "resources">("thinking");
+  const [activeBioTab, setActiveBioTab] = useState<"thinking" | "progress" | "qc" | "viz" | "knowledge">("thinking");
 
   // Bioagent data — in production these come from SSE events / API
   const [thinkingSections, setThinkingSections] = useState<ThinkingSection[]>([]);
@@ -111,13 +110,6 @@ export function AppShell() {
     { title: "Seurat使用心得与最佳实践", type: "docs", relevance: 0.82 },
   ]);
   const [knowledgeAnswer, setKnowledgeAnswer] = useState<string>("肺腺癌肿瘤微环境中常见免疫抑制亚群包括: Treg (FOXP3+), 耗竭T细胞 (PD-1+TOX+), MDSC-like巨噬细胞, 耐受性DC。");
-  const [resources, setResources] = useState<ResourceStatus | null>({
-    cpu: { usage: 34, cores: 16 },
-    memory: { usedBytes: 12.4e9, totalBytes: 32e9, usagePercent: 38.75 },
-    disk: { usedBytes: 45e9, totalBytes: 200e9, usagePercent: 22.5 },
-    containers: { running: 1, total: 1 },
-    hostname: "bioagent-workstation",
-  });
 
   // Refs for GSAP panel animations
   const bioPanelRef = useRef<HTMLDivElement>(null);
@@ -131,7 +123,6 @@ export function AppShell() {
     { id: "qc" as const, label: tl("tabQC"), icon: "✅" },
     { id: "viz" as const, label: tl("tabViz"), icon: "📈" },
     { id: "knowledge" as const, label: tl("tabKnowledge"), icon: "📚" },
-    { id: "resources" as const, label: tl("tabResources"), icon: "🖥️" },
   ];
 
   // Branch navigator state — populated by ChatWindow via onBranchDataChange
@@ -912,13 +903,6 @@ export function AppShell() {
               <KnowledgeRef
                 references={knowledgeRefs}
                 answer={knowledgeAnswer || undefined}
-                isLoading={false}
-                error={null}
-              />
-            )}
-            {activeBioTab === "resources" && (
-              <ResourceMonitor
-                resources={resources}
                 isLoading={false}
                 error={null}
               />
