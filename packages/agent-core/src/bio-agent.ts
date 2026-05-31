@@ -206,8 +206,6 @@ export class BioAgent {
           timestamp: new Date().toISOString(),
         });
 
-        // Yield the thinking section message
-        yield createThinkingSection(sessionId, [section]);
       }
     }
 

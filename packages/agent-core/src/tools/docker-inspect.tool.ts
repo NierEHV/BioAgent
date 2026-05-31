@@ -58,7 +58,7 @@ export async function dockerInspectHandler(
     rootFS: info.RootFS
       ? {
           layerCount: info.RootFS.Layers?.length ?? 0,
-          layers: info.RootFS.Layers?.map((l) => l.slice(0, 60) + "..."),
+          layers: info.RootFS.Layers?.map((l: string) => l.slice(0, 60) + "..."),
         }
       : undefined,
   };

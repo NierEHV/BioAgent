@@ -103,7 +103,7 @@ export async function dockerExecHandler(
 ): Promise<unknown> {
   switch (params.action) {
     case "ensure_image":
-      return executor.imageManager.ensureImage(params.image, params.platform);
+      return executor.containerManager.ensureImage(params.image, params.platform);
 
     case "start_container":
       return executor.containerManager.startContainer({

@@ -2,77 +2,135 @@
 // @bioagent/agent-core — Tools Index
 // ============================================================
 
+import {
+  dockerExecToolDef,
+  dockerExecToolSchema,
+  dockerExecHandler,
+  type DockerExecToolParams,
+} from "./docker-exec.tool.js";
+
+import {
+  dockerSearchToolDef,
+  dockerSearchToolSchema,
+  dockerSearchHandler,
+  type DockerSearchToolParams,
+} from "./docker-search.tool.js";
+
+import {
+  dockerPullToolDef,
+  dockerPullToolSchema,
+  dockerPullHandler,
+  type DockerPullToolParams,
+} from "./docker-pull.tool.js";
+
+import {
+  dockerInspectToolDef,
+  dockerInspectToolSchema,
+  dockerInspectHandler,
+  type DockerInspectToolParams,
+} from "./docker-inspect.tool.js";
+
+import {
+  dockerVerifyToolDef,
+  dockerVerifyToolSchema,
+  dockerVerifyHandler,
+  type DockerVerifyToolParams,
+} from "./docker-verify.tool.js";
+
+import {
+  skillInvokeToolDef,
+  skillInvokeToolSchema,
+  skillInvokeHandler,
+  type SkillInvokeToolParams,
+} from "./skill-invoke.tool.js";
+
+import {
+  kbQueryToolDef,
+  kbQueryToolSchema,
+  kbQueryHandler,
+  type KbQueryToolParams,
+} from "./kb-query.tool.js";
+
+import {
+  fileInspectToolDef,
+  fileInspectToolSchema,
+  fileInspectHandler,
+  type FileInspectToolParams,
+} from "./file-inspect.tool.js";
+
+import {
+  workflowRunToolDef,
+  workflowRunToolSchema,
+  workflowRunHandler,
+  type WorkflowRunToolParams,
+} from "./workflow-run.tool.js";
+
+// ---------------------------------------------------------------------------
+// Re-exports
+// ---------------------------------------------------------------------------
+
 export {
   dockerExecToolDef,
   dockerExecToolSchema,
   dockerExecHandler,
-} from "./docker-exec.tool.js";
-
-export type { DockerExecToolParams } from "./docker-exec.tool.js";
+  type DockerExecToolParams,
+};
 
 export {
   dockerSearchToolDef,
   dockerSearchToolSchema,
   dockerSearchHandler,
-} from "./docker-search.tool.js";
-
-export type { DockerSearchToolParams } from "./docker-search.tool.js";
+  type DockerSearchToolParams,
+};
 
 export {
   dockerPullToolDef,
   dockerPullToolSchema,
   dockerPullHandler,
-} from "./docker-pull.tool.js";
-
-export type { DockerPullToolParams } from "./docker-pull.tool.js";
+  type DockerPullToolParams,
+};
 
 export {
   dockerInspectToolDef,
   dockerInspectToolSchema,
   dockerInspectHandler,
-} from "./docker-inspect.tool.js";
-
-export type { DockerInspectToolParams } from "./docker-inspect.tool.js";
+  type DockerInspectToolParams,
+};
 
 export {
   dockerVerifyToolDef,
   dockerVerifyToolSchema,
   dockerVerifyHandler,
-} from "./docker-verify.tool.js";
-
-export type { DockerVerifyToolParams } from "./docker-verify.tool.js";
+  type DockerVerifyToolParams,
+};
 
 export {
   skillInvokeToolDef,
   skillInvokeToolSchema,
   skillInvokeHandler,
-} from "./skill-invoke.tool.js";
-
-export type { SkillInvokeToolParams } from "./skill-invoke.tool.js";
+  type SkillInvokeToolParams,
+};
 
 export {
   kbQueryToolDef,
   kbQueryToolSchema,
   kbQueryHandler,
-} from "./kb-query.tool.js";
-
-export type { KbQueryToolParams } from "./kb-query.tool.js";
+  type KbQueryToolParams,
+};
 
 export {
   fileInspectToolDef,
   fileInspectToolSchema,
   fileInspectHandler,
-} from "./file-inspect.tool.js";
-
-export type { FileInspectToolParams } from "./file-inspect.tool.js";
+  type FileInspectToolParams,
+};
 
 export {
   workflowRunToolDef,
   workflowRunToolSchema,
   workflowRunHandler,
-} from "./workflow-run.tool.js";
-
-export type { WorkflowRunToolParams } from "./workflow-run.tool.js";
+  type WorkflowRunToolParams,
+};
 
 // ---------------------------------------------------------------------------
 // All tools array — ready to register with the agent

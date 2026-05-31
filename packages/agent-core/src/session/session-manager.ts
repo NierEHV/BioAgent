@@ -3,7 +3,7 @@
 // ============================================================
 
 import { randomUUID } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, writeFileSync, unlinkSync, renameSync, readdirSync, statSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync, unlinkSync, rmdirSync, renameSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 // ---------------------------------------------------------------------------
@@ -447,6 +447,6 @@ export class SessionManager {
         unlinkSync(fullPath);
       }
     }
-    unlinkSync(dirPath); // remove the directory itself
+    rmdirSync(dirPath); // remove the directory itself
   }
 }

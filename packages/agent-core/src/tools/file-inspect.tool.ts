@@ -109,7 +109,7 @@ function inspectDirectory(
   const fileCount = items.filter((i) => i.type === "file").length;
   const dirCount = items.filter((i) => i.type === "directory").length;
 
-  const result: Record<string, unknown> = {
+  const result: Record<string, unknown> & { subdirectories?: Record<string, unknown> } = {
     type: "directory",
     path: dirPath,
     totalSize,
@@ -123,7 +123,7 @@ function inspectDirectory(
     result.subdirectories = {};
     for (const item of items) {
       if (item.type === "directory") {
-        result.subdirectories[item.name] = inspectDirectory(
+        result.subdirectories![item.name] = inspectDirectory(
           join(dirPath, item.name),
           false,
         );
@@ -140,7 +140,7 @@ function inspectDirectory(
 
 function inspectFile(
   filePath: string,
-  stats: ReturnType<typeof statSync>,
+  stats: { size: number; mtime: Date },
   sampleRows: number,
 ): unknown {
   const ext = extname(filePath).toLowerCase();

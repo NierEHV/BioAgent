@@ -3,7 +3,15 @@
 // ============================================================
 
 import { z } from "zod";
-import type { KnowledgeBridge } from "@bioagent/knowledge";
+import type {
+  KnowledgeBridge,
+  VectorSnippet,
+  SimilarCase,
+  GraphEntity,
+  GraphPath,
+  KnowledgeConflict,
+  WikiDocument,
+} from "@bioagent/knowledge";
 
 // ---------------------------------------------------------------------------
 // Zod schema
@@ -73,13 +81,13 @@ export async function kbQueryHandler(
     vector: {
       snippetCount: result.vectorResults.snippets.length,
       caseCount: result.vectorResults.similarCases.length,
-      snippets: result.vectorResults.snippets.slice(0, params.max_results).map((s) => ({
+      snippets: result.vectorResults.snippets.slice(0, params.max_results).map((s: VectorSnippet) => ({
         text: s.text.slice(0, 300),
         score: s.score,
         collection: s.collection,
         metadata: s.metadata,
       })),
-      similarCases: result.vectorResults.similarCases.map((c) => ({
+      similarCases: result.vectorResults.similarCases.map((c: SimilarCase) => ({
         projectId: c.projectId,
         description: c.description.slice(0, 200),
         omicsType: c.omicsType,
@@ -91,17 +99,17 @@ export async function kbQueryHandler(
       entityCount: result.graphResults.entities.length,
       pathCount: result.graphResults.paths.length,
       conflictCount: result.graphResults.conflicts.length,
-      entities: result.graphResults.entities.map((e) => ({
+      entities: result.graphResults.entities.map((e: GraphEntity) => ({
         id: e.id,
         type: e.type,
         name: e.name,
       })),
-      paths: result.graphResults.paths.map((p) => ({
+      paths: result.graphResults.paths.map((p: GraphPath) => ({
         nodes: p.nodes,
         length: p.length,
         explanation: p.explanation,
       })),
-      conflicts: result.graphResults.conflicts.map((c) => ({
+      conflicts: result.graphResults.conflicts.map((c: KnowledgeConflict) => ({
         entity1: c.entity1,
         entity2: c.entity2,
         claim1: c.claim1,
@@ -111,7 +119,7 @@ export async function kbQueryHandler(
     },
     wiki: {
       documentCount: result.wikiResults.documents.length,
-      documents: result.wikiResults.documents.map((d) => ({
+      documents: result.wikiResults.documents.map((d: WikiDocument) => ({
         title: d.title,
         topic: d.topic,
         confidence: d.confidence,

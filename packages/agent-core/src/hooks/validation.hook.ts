@@ -30,8 +30,9 @@ function containsDangerousPatterns(command: string): {
 } {
   const reasons: string[] = [];
 
-  // Absolute root removal
-  if (/rm\s+(-[a-zA-Z]*r[a-zA-Z]*f?\s+)*\/\b/.test(command)) {
+  // Absolute root removal — match `/` followed by whitespace, end-of-string,
+  // or a system directory (not data/tmp/workspace/home)
+  if (/rm\s+(-[a-zA-Z]*r[a-zA-Z]*f?\s+)*\/(\s|$|etc|bin|sbin|usr|boot|dev|proc|sys|root|var|opt|lib)/.test(command)) {
     reasons.push("Attempting to remove root filesystem (rm -rf /)");
   }
 
@@ -90,7 +91,11 @@ function isPathAllowed(filePath: string): boolean {
 
   // Absolute path check
   if (normalized.startsWith("/")) {
-    return PATH_WHITELIST.some((prefix) => normalized.startsWith(prefix));
+    return PATH_WHITELIST.some((prefix) => {
+      // Allow exact match (e.g., "/data" matches prefix "/data/")
+      const prefixBase = prefix.endsWith("/") ? prefix.slice(0, -1) : prefix;
+      return normalized === prefixBase || normalized.startsWith(prefix);
+    });
   }
 
   // Relative paths are allowed (they'll be resolved inside the container)

@@ -3,7 +3,7 @@
 // ============================================================
 
 import { z } from "zod";
-import type { DockerExecutor } from "@bioagent/executor";
+import type { DockerExecutor, SearchResult } from "@bioagent/executor";
 
 // ---------------------------------------------------------------------------
 // Zod schema
@@ -57,7 +57,7 @@ export async function dockerSearchHandler(
   ]);
 
   // Evaluate each result
-  const evaluations = dockerHubResults.map((r) => {
+  const evaluations = dockerHubResults.map((r: SearchResult) => {
     const evalResult = executor.imageSearch.evaluateImage(r);
     return {
       name: r.name,

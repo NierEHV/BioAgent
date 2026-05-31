@@ -83,45 +83,59 @@ export async function skillInvokeHandler(
 
   const command = `bioagent-skill ${params.skill_name} ${cliArgs}`.trim();
 
-  // If no existing container, use runOnce for a temporary execution
+  // If no existing container, start a temporary one, exec, then stop
   if (!params.container) {
-    const result = await executor.containerManager.runOnce({
-      image: "bioagent-scrna:latest",
-      name: containerName,
-      command: ["tail", "-f", "/dev/null"],
-      volumes: [],
-      env: {
-        INPUT_DIR: params.data_context?.input_dir ?? "/data/input",
-        OUTPUT_DIR: params.data_context?.output_dir ?? "/data/output",
-        PROJECT_ID: params.data_context?.project_id ?? "",
-        OMICS_TYPE: params.data_context?.omics_type ?? "",
-        ...Object.fromEntries(
-          Object.entries(params.params).map(([k, v]) => [
-            `SKILL_${k.toUpperCase()}`,
-            String(v),
-          ]),
-        ),
-      },
-      gpu: false,
-      network: "bridge",
-      command: command,
-      workdir: "/data",
-      timeout: 600_000,
-    });
-
-    return {
-      skillName: params.skill_name,
-      exitCode: result.exitCode,
-      stdout: result.stdout,
-      stderr: result.stderr,
-      truncated: result.truncated,
-      duration: result.duration,
-      container: containerName,
+    const envVars: Record<string, string> = {
+      INPUT_DIR: params.data_context?.input_dir ?? "/data/input",
+      OUTPUT_DIR: params.data_context?.output_dir ?? "/data/output",
+      PROJECT_ID: params.data_context?.project_id ?? "",
+      OMICS_TYPE: params.data_context?.omics_type ?? "",
     };
+    for (const [k, v] of Object.entries(params.params)) {
+      envVars[`SKILL_${k.toUpperCase()}`] = String(v);
+    }
+
+    try {
+      await executor.containerManager.startContainer({
+        image: "bioagent-scrna:latest",
+        name: containerName,
+        command: ["tail", "-f", "/dev/null"],
+        volumes: [],
+        env: envVars,
+        gpu: false,
+        network: "bridge",
+      });
+
+      const execResult = await executor.containerManager.execInContainer({
+        container: containerName,
+        command,
+        workdir: "/data",
+        timeout: 600_000,
+        env: {},
+        captureStderr: true,
+      });
+
+      return {
+        skillName: params.skill_name,
+        exitCode: execResult.exitCode,
+        stdout: execResult.stdout,
+        stderr: execResult.stderr,
+        truncated: execResult.truncated,
+        duration: execResult.duration,
+        container: containerName,
+      };
+    } finally {
+      // Clean up temporary container
+      try {
+        await executor.containerManager.stopContainer(containerName, { force: true });
+      } catch {
+        // Best-effort cleanup
+      }
+    }
   }
 
   // Execute in existing container
-  const result = await executor.containerManager.execInContainer({
+  const execResult = await executor.containerManager.execInContainer({
     container: params.container,
     command,
     workdir: "/data",
@@ -132,11 +146,11 @@ export async function skillInvokeHandler(
 
   return {
     skillName: params.skill_name,
-    exitCode: result.exitCode,
-    stdout: result.stdout,
-    stderr: result.stderr,
-    truncated: result.truncated,
-    duration: result.duration,
+    exitCode: execResult.exitCode,
+    stdout: execResult.stdout,
+    stderr: execResult.stderr,
+    truncated: execResult.truncated,
+    duration: execResult.duration,
     container: params.container,
   };
 }
