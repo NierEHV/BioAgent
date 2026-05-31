@@ -4,8 +4,13 @@
 // @bioagent/ui — FileBrowser
 // ============================================================
 // Left-sidebar tree file browser for project data files.
+// GSAP drives file list stagger entry and new file slide-in.
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useRef } from "react";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
+
+gsap.registerPlugin(useGSAP);
 
 export interface FileNode {
   name: string;
@@ -191,6 +196,7 @@ export default function FileBrowser({
   isLoading = false,
 }: FileBrowserProps) {
   const [filter, setFilter] = useState("");
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const filteredFiles = useMemo(() => {
     if (!filter.trim()) return files;
@@ -229,8 +235,52 @@ export default function FileBrowser({
     [onDeleteFile]
   );
 
+  // GSAP: file list entry stagger on first load / new files
+  const prevFileCountRef = useRef(files.length);
+
+  useGSAP(
+    () => {
+      const mm = gsap.matchMedia();
+      mm.add("(prefers-reduced-motion: reduce)", () => {});
+      mm.add("(prefers-reduced-motion: no-preference)", () => {
+        const itemEls =
+          containerRef.current?.querySelectorAll<HTMLDivElement>(
+            "[data-file-item]"
+          );
+
+        if (itemEls && itemEls.length > 0) {
+          if (files.length > prevFileCountRef.current) {
+            // New files added: animate only the new ones
+            const newCount = files.length - prevFileCountRef.current;
+            const newEls = Array.from(itemEls).slice(-newCount);
+            gsap.from(newEls, {
+              autoAlpha: 0,
+              x: -10,
+              stagger: 0.03,
+              duration: 0.25,
+              ease: "power2.out",
+            });
+          } else if (prevFileCountRef.current === 0 && files.length > 0) {
+            // First load: animate all
+            gsap.from(itemEls, {
+              autoAlpha: 0,
+              x: -10,
+              stagger: 0.03,
+              duration: 0.25,
+              ease: "power2.out",
+            });
+          }
+        }
+
+        prevFileCountRef.current = files.length;
+      });
+      return () => mm.revert();
+    },
+    { scope: containerRef, dependencies: [files.length] }
+  );
+
   return (
-    <div className="flex h-full flex-col">
+    <div ref={containerRef} className="flex h-full flex-col">
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-700">
         <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">

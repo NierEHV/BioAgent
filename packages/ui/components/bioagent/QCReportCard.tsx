@@ -4,8 +4,13 @@
 // @bioagent/ui — QCReportCard
 // ============================================================
 // Single Skill QC report card with overall badge and expandable gates.
+// Uses GSAP for expand/collapse animation and gate entrance stagger.
 
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
+
+gsap.registerPlugin(useGSAP);
 
 export interface QCGateData {
   id: string;
@@ -68,10 +73,122 @@ export default function QCReportCard({
     Record<string, string>
   >({});
 
+  const containerRef = useRef<HTMLDivElement>(null);
+  const gatesContainerRef = useRef<HTMLDivElement>(null);
+  const badgeRef = useRef<HTMLSpanElement>(null);
+  const summaryBarRef = useRef<HTMLDivElement>(null);
+  const expandChevronRef = useRef<SVGSVGElement>(null);
+
+  // GSAP: expand/collapse animation
+  useGSAP(
+    () => {
+      const mm = gsap.matchMedia();
+
+      mm.add("(prefers-reduced-motion: reduce)", () => {});
+
+      mm.add("(prefers-reduced-motion: no-preference)", () => {
+        if (!gatesContainerRef.current) return;
+
+        if (expanded) {
+          // Animate height from 0 to auto
+          gsap.fromTo(
+            gatesContainerRef.current,
+            { height: 0, overflow: "hidden" },
+            {
+              height: "auto",
+              duration: 0.3,
+              ease: "power2.out",
+              onComplete: () => {
+                if (gatesContainerRef.current) {
+                  gatesContainerRef.current.style.height = "auto";
+                  gatesContainerRef.current.style.overflow = "visible";
+                }
+              },
+            }
+          );
+
+          // Stagger gate entries
+          const gateEls = gatesContainerRef.current.querySelectorAll<HTMLDivElement>(
+            "[data-gate]"
+          );
+          if (gateEls.length > 0) {
+            gsap.from(gateEls, {
+              autoAlpha: 0,
+              x: -30,
+              stagger: 0.08,
+              duration: 0.35,
+              ease: "power2.out",
+            });
+          }
+        } else {
+          // Animate height to 0
+          gsap.to(gatesContainerRef.current, {
+            height: 0,
+            overflow: "hidden",
+            duration: 0.25,
+            ease: "power2.in",
+          });
+        }
+
+        // Chevron rotation
+        if (expandChevronRef.current) {
+          gsap.to(expandChevronRef.current, {
+            rotation: expanded ? 180 : 0,
+            duration: 0.25,
+            ease: "power2.out",
+          });
+        }
+      });
+
+      return () => mm.revert();
+    },
+    { scope: containerRef, dependencies: [expanded, gates.length] }
+  );
+
+  // GSAP: badge state transition on overall change
+  useGSAP(
+    () => {
+      if (!badgeRef.current) return;
+      const mm = gsap.matchMedia();
+      mm.add("(prefers-reduced-motion: no-preference)", () => {
+        gsap.fromTo(
+          badgeRef.current,
+          { scale: 0.8 },
+          { scale: 1, duration: 0.25, ease: "back.out(1.2)" }
+        );
+      });
+      return () => mm.revert();
+    },
+    { scope: containerRef, dependencies: [overall] }
+  );
+
+  // GSAP: summary bar entrance
+  useGSAP(
+    () => {
+      if (!summaryBarRef.current) return;
+      const mm = gsap.matchMedia();
+      mm.add("(prefers-reduced-motion: no-preference)", () => {
+        gsap.from(summaryBarRef.current, {
+          autoAlpha: 0,
+          scaleX: 0,
+          duration: 0.4,
+          ease: "power2.out",
+          transformOrigin: "left center",
+        });
+      });
+      return () => mm.revert();
+    },
+    { scope: containerRef, dependencies: [] }
+  );
+
   const badge = overallBadge[overall];
 
+  const passCount = gates.filter((g) => g.result === "pass").length;
+  const warnCount = gates.filter((g) => g.result === "warn").length;
+  const failCount = gates.filter((g) => g.result === "fail").length;
+
   return (
-    <div className="card animate-fade-in">
+    <div ref={containerRef} className="card animate-fade-in">
       {/* Header */}
       <button
         type="button"
@@ -82,16 +199,17 @@ export default function QCReportCard({
           <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
             {skillName}
           </span>
-          <span className={badge.className}>
+          <span ref={badgeRef} className={badge.className} style={{ willChange: "transform" }}>
             {badge.emoji} {badge.label}
           </span>
         </div>
         <div className="flex items-center gap-2 text-xs text-gray-400">
           <span>
-            {gates.filter((g) => g.result === "pass").length}/{gates.length} passed
+            {passCount}/{gates.length} passed
           </span>
           <svg
-            className={`h-4 w-4 transition-transform ${expanded ? "rotate-180" : ""}`}
+            ref={expandChevronRef}
+            className="h-4 w-4"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -107,50 +225,46 @@ export default function QCReportCard({
       </button>
 
       {/* Gate summary bar */}
-      <div className="mt-2 flex gap-1">
+      <div ref={summaryBarRef} className="mt-2 flex gap-1" style={{ transformOrigin: "left center" }}>
         <div className="flex h-1.5 flex-1 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
-          {gates.length > 0 && (() => {
-            const passCount = gates.filter((g) => g.result === "pass").length;
-            const warnCount = gates.filter((g) => g.result === "warn").length;
-            const failCount = gates.filter((g) => g.result === "fail").length;
-            return (
-              <>
-                {passCount > 0 && (
-                  <div
-                    className="bg-green-500"
-                    style={{
-                      width: `${(passCount / gates.length) * 100}%`,
-                    }}
-                  />
-                )}
-                {warnCount > 0 && (
-                  <div
-                    className="bg-amber-500"
-                    style={{
-                      width: `${(warnCount / gates.length) * 100}%`,
-                    }}
-                  />
-                )}
-                {failCount > 0 && (
-                  <div
-                    className="bg-red-500"
-                    style={{
-                      width: `${(failCount / gates.length) * 100}%`,
-                    }}
-                  />
-                )}
-              </>
-            );
-          })()}
+          {gates.length > 0 && (
+            <>
+              {passCount > 0 && (
+                <div
+                  className="bg-green-500"
+                  style={{
+                    width: `${(passCount / gates.length) * 100}%`,
+                  }}
+                />
+              )}
+              {warnCount > 0 && (
+                <div
+                  className="bg-amber-500"
+                  style={{
+                    width: `${(warnCount / gates.length) * 100}%`,
+                  }}
+                />
+              )}
+              {failCount > 0 && (
+                <div
+                  className="bg-red-500"
+                  style={{
+                    width: `${(failCount / gates.length) * 100}%`,
+                  }}
+                />
+              )}
+            </>
+          )}
         </div>
       </div>
 
       {/* Expanded gates */}
-      {expanded && (
+      <div ref={gatesContainerRef} style={{ overflow: "hidden", height: 0 }}>
         <div className="mt-3 space-y-2">
           {gates.map((gate) => (
             <div
               key={gate.id}
+              data-gate={gate.id}
               className={`rounded-lg border-l-4 p-3 ${gateResultColor[gate.result]}`}
             >
               <div className="flex items-center justify-between">
@@ -252,7 +366,7 @@ export default function QCReportCard({
             </div>
           ))}
         </div>
-      )}
+      </div>
     </div>
   );
 }

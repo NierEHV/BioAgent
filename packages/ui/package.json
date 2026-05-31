@@ -16,8 +16,10 @@
   "dependencies": {
     "@earendil-works/pi-ai": "^0.75.5",
     "@earendil-works/pi-coding-agent": "^0.75.5",
+    "@gsap/react": "^2.1.2",
     "@lobehub/icons": "^5.6.0",
     "@types/react-syntax-highlighter": "^15.5.13",
+    "gsap": "^3.15.0",
     "next": "16.2.1",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",

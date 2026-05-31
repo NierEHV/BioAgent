@@ -4,8 +4,13 @@
 // @bioagent/ui — KnowledgeRef
 // ============================================================
 // Display knowledge references from the knowledge base query results.
+// GSAP drives reference list fade + slide up entry.
 
-import { useState } from "react";
+import { useState, useRef } from "react";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
+
+gsap.registerPlugin(useGSAP);
 
 export interface KnowledgeReference {
   title: string;
@@ -43,9 +48,37 @@ export default function KnowledgeRef({
   error = null,
 }: KnowledgeRefProps) {
   const [showAnswer, setShowAnswer] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const refsListRef = useRef<HTMLUListElement>(null);
+
+  // GSAP: reference list entry animation
+  useGSAP(
+    () => {
+      if (!refsListRef.current || references.length === 0) return;
+      const mm = gsap.matchMedia();
+      mm.add("(prefers-reduced-motion: reduce)", () => {});
+      mm.add("(prefers-reduced-motion: no-preference)", () => {
+        const items =
+          refsListRef.current?.querySelectorAll<HTMLLIElement>(
+            "[data-ref-item]"
+          );
+        if (items && items.length > 0) {
+          gsap.from(items, {
+            autoAlpha: 0,
+            y: 8,
+            stagger: 0.05,
+            duration: 0.3,
+            ease: "power2.out",
+          });
+        }
+      });
+      return () => mm.revert();
+    },
+    { scope: containerRef, dependencies: [references.length] }
+  );
 
   return (
-    <div className="card">
+    <div ref={containerRef} className="card">
       <h3 className="mb-3 text-sm font-semibold text-gray-900 dark:text-gray-100">
         Knowledge Reference
       </h3>
@@ -101,7 +134,7 @@ export default function KnowledgeRef({
                 </svg>
               </button>
               {showAnswer && (
-                <div className="animate-slide-down mt-2 rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50">
+                <div className="mt-2 rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50">
                   <p className="text-sm text-gray-700 dark:text-gray-300">
                     {answer}
                   </p>
@@ -116,9 +149,9 @@ export default function KnowledgeRef({
               No knowledge references found
             </p>
           ) : (
-            <ul className="space-y-2">
+            <ul ref={refsListRef} className="space-y-2">
               {references.map((ref, idx) => (
-                <li key={`${ref.title}-${idx}`}>
+                <li key={`${ref.title}-${idx}`} data-ref-item={idx}>
                   <a
                     href={ref.url || `https://doi.org/${ref.doi || ""}`}
                     target="_blank"

@@ -4,8 +4,14 @@
 // @bioagent/ui — ResourceMonitor
 // ============================================================
 // Real-time container/host resource monitoring (CPU / RAM / Disk).
+// GSAP drives scaleX progress bars, stagger entry, and number snapping.
 
+import { useRef } from "react";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
 import type { ResourceStatus } from "@/lib/bioagent-client";
+
+gsap.registerPlugin(useGSAP);
 
 interface ResourceMonitorProps {
   resources: ResourceStatus | null;
@@ -27,13 +33,39 @@ function GaugeBar({
   total,
   percent,
   colorClass,
+  barRef,
+  valueRef,
 }: {
   label: string;
   used: number;
   total: number;
   percent: number;
   colorClass: string;
+  barRef?: React.Ref<HTMLDivElement>;
+  valueRef?: React.Ref<HTMLParagraphElement>;
 }) {
+  // Animate percent text with snap
+  useGSAP(
+    () => {
+      if (!valueRef || !("current" in valueRef)) return;
+      const mm = gsap.matchMedia();
+      mm.add("(prefers-reduced-motion: no-preference)", () => {
+        gsap.fromTo(
+          (valueRef as React.RefObject<HTMLParagraphElement>).current,
+          { textContent: "0.0" },
+          {
+            textContent: percent.toFixed(1),
+            duration: 0.5,
+            ease: "power2.out",
+            snap: { textContent: 0.1 },
+          }
+        );
+      });
+      return () => mm.revert();
+    },
+    { dependencies: [percent] }
+  );
+
   return (
     <div>
       <div className="mb-1 flex items-center justify-between text-xs">
@@ -46,11 +78,16 @@ function GaugeBar({
       </div>
       <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
         <div
-          className={`h-full rounded-full transition-all duration-500 ${colorClass}`}
-          style={{ width: `${Math.min(percent, 100)}%` }}
+          ref={barRef}
+          className={`h-full rounded-full ${colorClass}`}
+          style={{
+            transformOrigin: "left center",
+            width: "100%",
+            transform: `scaleX(${Math.min(percent, 100) / 100})`,
+          }}
         />
       </div>
-      <p className="mt-0.5 text-right text-xs text-gray-400">
+      <p ref={valueRef} className="mt-0.5 text-right text-xs text-gray-400">
         {percent.toFixed(1)}%
       </p>
     </div>
@@ -62,8 +99,37 @@ export default function ResourceMonitor({
   isLoading = false,
   error = null,
 }: ResourceMonitorProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // GSAP: stagger bar appearance on first load
+  useGSAP(
+    () => {
+      if (!resources || !containerRef.current) return;
+      const mm = gsap.matchMedia();
+      mm.add("(prefers-reduced-motion: reduce)", () => {});
+      mm.add("(prefers-reduced-motion: no-preference)", () => {
+        const bars =
+          containerRef.current?.querySelectorAll<HTMLDivElement>(
+            "[data-resource-bar]"
+          );
+        if (bars && bars.length > 0) {
+          gsap.from(bars, {
+            autoAlpha: 0,
+            scaleX: 0,
+            stagger: 0.1,
+            duration: 0.4,
+            ease: "power2.out",
+            transformOrigin: "left center",
+          });
+        }
+      });
+      return () => mm.revert();
+    },
+    { scope: containerRef, dependencies: [resources != null] }
+  );
+
   return (
-    <div className="card">
+    <div ref={containerRef} className="card">
       <div className="mb-3 flex items-center justify-between">
         <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
           Resources
@@ -90,52 +156,58 @@ export default function ResourceMonitor({
       {!isLoading && !error && resources && (
         <div className="space-y-4">
           {/* CPU */}
-          <GaugeBar
-            label="CPU"
-            used={0}
-            total={0}
-            percent={resources.cpu.usage}
-            colorClass={
-              resources.cpu.usage > 80
-                ? "bg-red-500"
-                : resources.cpu.usage > 60
-                  ? "bg-amber-500"
-                  : "bg-green-500"
-            }
-          />
+          <div data-resource-bar="cpu">
+            <GaugeBar
+              label="CPU"
+              used={0}
+              total={0}
+              percent={resources.cpu.usage}
+              colorClass={
+                resources.cpu.usage > 80
+                  ? "bg-red-500"
+                  : resources.cpu.usage > 60
+                    ? "bg-amber-500"
+                    : "bg-green-500"
+              }
+            />
+          </div>
           <p className="-mt-3 text-xs text-gray-400">
             {resources.cpu.usage.toFixed(1)}% of {resources.cpu.cores} cores
           </p>
 
           {/* Memory */}
-          <GaugeBar
-            label="Memory"
-            used={resources.memory.usedBytes}
-            total={resources.memory.totalBytes}
-            percent={resources.memory.usagePercent}
-            colorClass={
-              resources.memory.usagePercent > 80
-                ? "bg-red-500"
-                : resources.memory.usagePercent > 60
-                  ? "bg-amber-500"
-                  : "bg-green-500"
-            }
-          />
+          <div data-resource-bar="memory">
+            <GaugeBar
+              label="Memory"
+              used={resources.memory.usedBytes}
+              total={resources.memory.totalBytes}
+              percent={resources.memory.usagePercent}
+              colorClass={
+                resources.memory.usagePercent > 80
+                  ? "bg-red-500"
+                  : resources.memory.usagePercent > 60
+                    ? "bg-amber-500"
+                    : "bg-green-500"
+              }
+            />
+          </div>
 
           {/* Disk */}
-          <GaugeBar
-            label="Disk"
-            used={resources.disk.usedBytes}
-            total={resources.disk.totalBytes}
-            percent={resources.disk.usagePercent}
-            colorClass={
-              resources.disk.usagePercent > 85
-                ? "bg-red-500"
-                : resources.disk.usagePercent > 70
-                  ? "bg-amber-500"
-                  : "bg-green-500"
-            }
-          />
+          <div data-resource-bar="disk">
+            <GaugeBar
+              label="Disk"
+              used={resources.disk.usedBytes}
+              total={resources.disk.totalBytes}
+              percent={resources.disk.usagePercent}
+              colorClass={
+                resources.disk.usagePercent > 85
+                  ? "bg-red-500"
+                  : resources.disk.usagePercent > 70
+                    ? "bg-amber-500"
+                    : "bg-green-500"
+              }
+            />
+          </div>
 
           {/* Containers */}
           <div className="rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50">

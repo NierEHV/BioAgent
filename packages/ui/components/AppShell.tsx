@@ -2,6 +2,8 @@
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
 import { SessionSidebar } from "./SessionSidebar";
 import { ChatWindow } from "./ChatWindow";
 import { FileViewer } from "./FileViewer";
@@ -12,6 +14,8 @@ import { BranchNavigator } from "./BranchNavigator";
 import { useTheme } from "@/hooks/useTheme";
 import type { SessionInfo, SessionTreeNode } from "@/lib/types";
 import type { ChatInputHandle } from "./ChatInput";
+
+gsap.registerPlugin(useGSAP);
 
 // BioAgent — bioinformatics panel components
 import { ProgressTracker, VizPanel, ResourceMonitor, WorkflowSelector } from "@/components/bioagent";
@@ -55,6 +59,11 @@ export function AppShell() {
   const [knowledgeRefs, setKnowledgeRefs] = useState<KnowledgeReference[]>([]);
   const [knowledgeAnswer, setKnowledgeAnswer] = useState<string>("");
   const [resources, setResources] = useState<ResourceStatus | null>(null);
+
+  // Refs for GSAP panel animations
+  const bioPanelRef = useRef<HTMLDivElement>(null);
+  const bioPanelContentRef = useRef<HTMLDivElement>(null);
+  const rightPanelRef = useRef<HTMLDivElement>(null);
 
   // Bio-tab definitions
   const bioTabs = [
@@ -124,6 +133,97 @@ export function AppShell() {
   const [fileTabs, setFileTabs] = useState<Tab[]>([]);
   const [activeFileTabId, setActiveFileTabId] = useState<string | null>(null);
   const [rightPanelOpen, setRightPanelOpen] = useState(false);
+
+  // Track previous panel open states for GSAP transitions
+  const prevBioPanelOpenRef = useRef(false);
+  const prevRightPanelOpenRef = useRef(false);
+
+  // GSAP: bio panel open/close animation
+  useGSAP(
+    () => {
+      if (!bioPanelRef.current) return;
+      const panel = bioPanelRef.current;
+      const mm = gsap.matchMedia();
+
+      mm.add("(prefers-reduced-motion: reduce)", () => {
+        // Instant show/hide without animation
+        gsap.set(panel, { x: bioPanelOpen ? 0 : 380 });
+      });
+
+      mm.add("(prefers-reduced-motion: no-preference)", () => {
+        if (bioPanelOpen && !prevBioPanelOpenRef.current) {
+          // Opening: panel starts hidden at x=380
+          gsap.to(panel, {
+            x: 0,
+            duration: 0.35,
+            ease: "power3.out",
+          });
+        } else if (!bioPanelOpen && prevBioPanelOpenRef.current) {
+          // Closing: animate to x=380
+          gsap.to(panel, {
+            x: 380,
+            duration: 0.25,
+            ease: "power2.in",
+          });
+        }
+      });
+
+      prevBioPanelOpenRef.current = bioPanelOpen;
+      return () => mm.revert();
+    },
+    { scope: undefined, dependencies: [bioPanelOpen] }
+  );
+
+  // GSAP: right panel open/close animation
+  useGSAP(
+    () => {
+      if (!rightPanelRef.current) return;
+      const panel = rightPanelRef.current;
+      const mm = gsap.matchMedia();
+
+      mm.add("(prefers-reduced-motion: reduce)", () => {
+        gsap.set(panel, { x: rightPanelOpen ? 0 : 380 });
+      });
+
+      mm.add("(prefers-reduced-motion: no-preference)", () => {
+        if (rightPanelOpen && !prevRightPanelOpenRef.current) {
+          gsap.to(panel, {
+            x: 0,
+            duration: 0.35,
+            ease: "power3.out",
+          });
+        } else if (!rightPanelOpen && prevRightPanelOpenRef.current) {
+          gsap.to(panel, {
+            x: 380,
+            duration: 0.25,
+            ease: "power2.in",
+          });
+        }
+      });
+
+      prevRightPanelOpenRef.current = rightPanelOpen;
+      return () => mm.revert();
+    },
+    { scope: undefined, dependencies: [rightPanelOpen] }
+  );
+
+  // GSAP: bio tab content switching
+  useGSAP(
+    () => {
+      if (!bioPanelContentRef.current) return;
+      const mm = gsap.matchMedia();
+      mm.add("(prefers-reduced-motion: reduce)", () => {});
+      mm.add("(prefers-reduced-motion: no-preference)", () => {
+        gsap.fromTo(
+          bioPanelContentRef.current,
+          { autoAlpha: 0, y: 8 },
+          { autoAlpha: 1, y: 0, duration: 0.2, ease: "power2.out" }
+        );
+      });
+      return () => mm.revert();
+    },
+    { scope: undefined, dependencies: [activeBioTab] }
+  );
 
   const handleAtMention = useCallback((relativePath: string) => {
     chatInputRef.current?.insertText("`" + relativePath + "`");
@@ -628,7 +728,8 @@ export function AppShell() {
 
       {/* BioAgent right panel — bioinformatics tools */}
       <div
-        className={`bio-panel-container${bioPanelOpen ? " bio-panel-open" : " bio-panel-closed"}`}
+        ref={bioPanelRef}
+        className={`bioagent-panel bio-panel-container${bioPanelOpen ? " bio-panel-open" : " bio-panel-closed"}`}
         style={{
           display: "flex",
           flexDirection: "column",
@@ -636,6 +737,10 @@ export function AppShell() {
           background: "var(--bg)",
           flexShrink: 0,
           overflow: "hidden",
+          width: 380,
+          minWidth: 380,
+          transform: `translateX(${bioPanelOpen ? 0 : 380}px)`,
+          marginRight: bioPanelOpen ? 0 : -380,
         }}
       >
         {/* Bio panel tab bar */}
@@ -687,7 +792,7 @@ export function AppShell() {
 
         {/* Bio panel content */}
         <div style={{ flex: 1, overflow: "hidden" }}>
-          <div style={{ height: "100%", overflowY: "auto", padding: 12 }}>
+          <div key={activeBioTab} ref={bioPanelContentRef} style={{ height: "100%", overflowY: "auto", padding: 12 }}>
             {activeBioTab === "thinking" && (
               <ThinkingPanel sections={thinkingSections} isThinking={isThinking} />
             )}
@@ -764,12 +869,19 @@ export function AppShell() {
 
       {/* Right panel: file viewer — always mounted, width animated via CSS */}
       <div
+        ref={rightPanelRef}
         className={`right-panel-container${rightPanelOpen ? " right-panel-open" : " right-panel-closed"}`}
         style={{
           display: "flex",
           flexDirection: "column",
           borderLeft: "1px solid var(--border)",
           background: "var(--bg)",
+          flexShrink: 0,
+          overflow: "hidden",
+          width: rightPanelOpen ? "42%" : 0,
+          minWidth: rightPanelOpen ? 300 : 0,
+          transform: `translateX(${rightPanelOpen ? 0 : 380}px)`,
+          marginRight: rightPanelOpen ? 0 : -380,
         }}
       >
         {/* Right panel tab bar */}

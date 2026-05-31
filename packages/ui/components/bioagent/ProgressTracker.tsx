@@ -5,7 +5,12 @@
 // ============================================================
 // DAG progress vertical timeline showing workflow node execution.
 
+import { useRef, useCallback } from "react";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
 import { type WorkflowNodeState } from "@/hooks/useWorkflow";
+
+gsap.registerPlugin(useGSAP);
 
 interface ProgressTrackerProps {
   workflowRunId: string;
@@ -31,7 +36,7 @@ const statusEmoji: Record<string, string> = {
 const statusColor: Record<string, string> = {
   pending: "bg-gray-200 dark:bg-gray-700",
   ready: "bg-blue-300 dark:bg-blue-600",
-  running: "bg-blue-500 animate-pulse",
+  running: "bg-blue-500",
   completed: "bg-green-500",
   failed: "bg-red-500",
   skipped: "bg-gray-400",
@@ -54,6 +59,111 @@ function getNodeDuration(
   return formatDuration(end - start);
 }
 
+function NodeItem({
+  node,
+  isLast,
+  nodeRefFn,
+}: {
+  node: WorkflowNodeState;
+  isLast: boolean;
+  nodeRefFn: (nodeId: string, el: HTMLDivElement | null) => void;
+}) {
+  const dotRef = useRef<HTMLDivElement>(null);
+
+  const setDotRef = useCallback(
+    (el: HTMLDivElement | null) => {
+      (dotRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
+      if (el) {
+        // Animate completed dot bounce
+        if (node.status === "completed") {
+          gsap.fromTo(el, { scale: 0.8 }, { scale: 1.2, duration: 0.2, ease: "back.out", yoyo: true, repeat: 1 });
+        }
+      }
+    },
+    // Only run on mount / status change to completed
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [node.nodeId]
+  );
+
+  // Running node pulse
+  useGSAP(
+    () => {
+      if (node.status === "running" && dotRef.current) {
+        gsap.to(dotRef.current, {
+          scale: 1.05,
+          duration: 1.5,
+          repeat: -1,
+          yoyo: true,
+          ease: "sine.inOut",
+        });
+      }
+    },
+    { dependencies: [node.status], scope: undefined }
+  );
+
+  return (
+    <div
+      ref={(el) => nodeRefFn(node.nodeId, el)}
+      className="flex gap-3"
+      style={{ willChange: "transform, opacity" }}
+    >
+      {/* Timeline connector */}
+      <div className="flex flex-col items-center">
+        <div
+          ref={setDotRef}
+          className={`h-5 w-5 rounded-full border-2 border-white dark:border-gray-800 ${statusColor[node.status]}`}
+        />
+        {!isLast && (
+          <div
+            className={`w-0.5 flex-1 ${
+              node.status === "completed"
+                ? "bg-green-400"
+                : "bg-gray-200 dark:bg-gray-700"
+            }`}
+          />
+        )}
+      </div>
+
+      {/* Node content */}
+      <div className={`pb-4 flex-1`}>
+        <div className="flex items-center gap-2">
+          <span className="text-sm">{statusEmoji[node.status] || "❓"}</span>
+          <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+            {node.skill}
+          </span>
+          <span
+            className={`inline-flex rounded-full px-1.5 py-0.5 text-xs font-medium ${
+              node.status === "completed"
+                ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300"
+                : node.status === "running"
+                  ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                  : node.status === "failed"
+                    ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300"
+                    : "bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400"
+            }`}
+          >
+            {node.status}
+          </span>
+        </div>
+
+        <div className="mt-0.5 flex items-center gap-3 text-xs text-gray-400">
+          <span>{getNodeDuration(node.startedAt, node.endedAt)}</span>
+          {node.retryCount > 0 && (
+            <span>Retries: {node.retryCount}</span>
+          )}
+          {node.status === "paused" && (
+            <span className="text-amber-500">Checkpoint saved</span>
+          )}
+        </div>
+
+        {node.error && (
+          <p className="mt-1 text-xs text-red-500">{node.error}</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function ProgressTracker({
   workflowRunId,
   nodes,
@@ -63,10 +173,103 @@ export default function ProgressTracker({
   onResume,
   onAbort,
 }: ProgressTrackerProps) {
-  const progressPercent = Math.round(currentProgress * 100);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const barRef = useRef<HTMLDivElement>(null);
+  const nodeRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+
+  const setNodeRef = useCallback(
+    (nodeId: string, el: HTMLDivElement | null) => {
+      if (el) {
+        nodeRefs.current.set(nodeId, el);
+      } else {
+        nodeRefs.current.delete(nodeId);
+      }
+    },
+    []
+  );
+
+  const prevNodesLengthRef = useRef(nodes.length);
+  const prevCompletedIdsRef = useRef(new Set<string>());
+
+  // GSAP: progress bar + node entry animations
+  useGSAP(
+    () => {
+      const mm = gsap.matchMedia();
+
+      // Reduced motion fallback
+      mm.add("(prefers-reduced-motion: reduce)", () => {
+        // No animation for reduced-motion users
+      });
+
+      mm.add("(prefers-reduced-motion: no-preference)", () => {
+        // Progress bar: scaleX
+        gsap.to(barRef.current, {
+          scaleX: currentProgress,
+          duration: 0.6,
+          ease: "power2.out",
+          transformOrigin: "left center",
+        });
+
+        // New nodes entry animation
+        if (nodes.length > prevNodesLengthRef.current) {
+          const newNodeIds = nodes
+            .slice(prevNodesLengthRef.current)
+            .map((n) => n.nodeId);
+
+          newNodeIds.forEach((id) => {
+            const el = nodeRefs.current.get(id);
+            if (el) {
+              gsap.from(el, {
+                autoAlpha: 0,
+                x: -20,
+                duration: 0.3,
+                ease: "power2.out",
+              });
+            }
+          });
+        }
+
+        // Completed node dot bounce
+        const currentCompletedIds = new Set(
+          nodes
+            .filter((n) => n.status === "completed")
+            .map((n) => n.nodeId)
+        );
+        currentCompletedIds.forEach((id) => {
+          if (!prevCompletedIdsRef.current.has(id)) {
+            // Newly completed node — find the dot inside
+            const nodeEl = nodeRefs.current.get(id);
+            if (nodeEl) {
+              const dot = nodeEl.querySelector<HTMLDivElement>(
+                "div.flex.flex-col.items-center > div.rounded-full"
+              );
+              if (dot) {
+                gsap.fromTo(
+                  dot,
+                  { scale: 0.8 },
+                  { scale: 1.2, duration: 0.2, ease: "back.out", yoyo: true, repeat: 1 }
+                );
+              }
+            }
+          }
+        });
+
+        prevNodesLengthRef.current = nodes.length;
+        prevCompletedIdsRef.current = currentCompletedIds;
+      });
+
+      return () => mm.revert();
+    },
+    { scope: containerRef, dependencies: [currentProgress, nodes.length] }
+  );
+
+  // Completeness percentage text
+  const completedCount = nodes.filter(
+    (n) => n.status === "completed" || n.status === "skipped"
+  ).length;
 
   return (
-    <div className="card">
+    <div ref={containerRef} className="card">
       {/* Header */}
       <div className="mb-4 flex items-center justify-between">
         <div>
@@ -124,7 +327,7 @@ export default function ProgressTracker({
       <div className="mb-4">
         <div className="mb-1 flex items-center justify-between text-xs">
           <span className="text-gray-500 dark:text-gray-400">
-            {nodes.filter((n) => n.status === "completed" || n.status === "skipped").length} / {nodes.length} nodes
+            {completedCount} / {nodes.length} nodes
           </span>
           <span className="text-gray-400">
             Est. remaining: {estimatedRemaining}
@@ -132,12 +335,13 @@ export default function ProgressTracker({
         </div>
         <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
           <div
-            className="h-full rounded-full bg-brand-600 transition-all duration-500 ease-out"
-            style={{ width: `${progressPercent}%` }}
+            ref={barRef}
+            className="h-full rounded-full bg-brand-600"
+            style={{ transformOrigin: "left center", width: "100%", transform: `scaleX(${currentProgress})` }}
           />
         </div>
         <p className="mt-1 text-right text-xs text-gray-400">
-          {progressPercent}%
+          {Math.round(currentProgress * 100)}%
         </p>
       </div>
 
@@ -149,60 +353,12 @@ export default function ProgressTracker({
           </p>
         )}
         {nodes.map((node, idx) => (
-          <div key={node.nodeId} className="flex gap-3">
-            {/* Timeline connector */}
-            <div className="flex flex-col items-center">
-              <div
-                className={`h-5 w-5 rounded-full border-2 border-white dark:border-gray-800 ${statusColor[node.status]}`}
-              />
-              {idx < nodes.length - 1 && (
-                <div
-                  className={`w-0.5 flex-1 ${
-                    node.status === "completed"
-                      ? "bg-green-400"
-                      : "bg-gray-200 dark:bg-gray-700"
-                  }`}
-                />
-              )}
-            </div>
-
-            {/* Node content */}
-            <div className={`pb-4 flex-1 ${idx === nodes.length - 1 ? "" : ""}`}>
-              <div className="flex items-center gap-2">
-                <span className="text-sm">{statusEmoji[node.status] || "❓"}</span>
-                <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
-                  {node.skill}
-                </span>
-                <span
-                  className={`inline-flex rounded-full px-1.5 py-0.5 text-xs font-medium ${
-                    node.status === "completed"
-                      ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300"
-                      : node.status === "running"
-                        ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
-                        : node.status === "failed"
-                          ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300"
-                          : "bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400"
-                  }`}
-                >
-                  {node.status}
-                </span>
-              </div>
-
-              <div className="mt-0.5 flex items-center gap-3 text-xs text-gray-400">
-                <span>{getNodeDuration(node.startedAt, node.endedAt)}</span>
-                {node.retryCount > 0 && (
-                  <span>Retries: {node.retryCount}</span>
-                )}
-                {node.status === "paused" && (
-                  <span className="text-amber-500">Checkpoint saved</span>
-                )}
-              </div>
-
-              {node.error && (
-                <p className="mt-1 text-xs text-red-500">{node.error}</p>
-              )}
-            </div>
-          </div>
+          <NodeItem
+            key={node.nodeId}
+            node={node}
+            isLast={idx === nodes.length - 1}
+            nodeRefFn={setNodeRef}
+          />
         ))}
       </div>
 

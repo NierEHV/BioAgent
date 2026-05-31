@@ -4,8 +4,13 @@
 // @bioagent/ui — VizPanel
 // ============================================================
 // Tab-switching visualization panel (UMAP / Volcano / Heatmap / Dotplot / Violin).
+// GSAP drives tab content crossfade and image load animation.
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
+
+gsap.registerPlugin(useGSAP);
 
 type VizType = "umap" | "volcano" | "heatmap" | "dotplot" | "violin";
 
@@ -36,6 +41,10 @@ export default function VizPanel({
 }: VizPanelProps) {
   const [activeTab, setActiveTab] = useState<VizType>("umap");
 
+  const containerRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
+
   const activeViz = visualizations.find((v) => v.type === activeTab);
 
   const hasViz = useCallback(
@@ -43,8 +52,45 @@ export default function VizPanel({
     [visualizations]
   );
 
+  // GSAP: tab content crossfade on activeTab change
+  useGSAP(
+    () => {
+      const mm = gsap.matchMedia();
+      mm.add("(prefers-reduced-motion: reduce)", () => {});
+      mm.add("(prefers-reduced-motion: no-preference)", () => {
+        if (contentRef.current && activeViz) {
+          gsap.fromTo(
+            contentRef.current,
+            { autoAlpha: 0, y: 10 },
+            { autoAlpha: 1, y: 0, duration: 0.25, ease: "power2.out" }
+          );
+        }
+      });
+      return () => mm.revert();
+    },
+    { scope: containerRef, dependencies: [activeTab] }
+  );
+
+  // GSAP: image load animation
+  useGSAP(
+    () => {
+      if (!imgRef.current || !activeViz) return;
+      const mm = gsap.matchMedia();
+      mm.add("(prefers-reduced-motion: no-preference)", () => {
+        gsap.from(imgRef.current, {
+          autoAlpha: 0,
+          scale: 0.95,
+          duration: 0.4,
+          ease: "power2.out",
+        });
+      });
+      return () => mm.revert();
+    },
+    { scope: containerRef, dependencies: [activeViz?.url] }
+  );
+
   return (
-    <div className="card">
+    <div ref={containerRef} className="card">
       <h3 className="mb-3 text-sm font-semibold text-gray-900 dark:text-gray-100">
         Visualizations
       </h3>
@@ -92,9 +138,10 @@ export default function VizPanel({
         )}
 
         {!isLoading && !error && activeViz && (
-          <div className="p-4">
+          <div ref={contentRef} className="p-4">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
+              ref={imgRef}
               src={activeViz.url}
               alt={`${vizLabels[activeTab].label} visualization`}
               className="h-auto w-full rounded-lg"

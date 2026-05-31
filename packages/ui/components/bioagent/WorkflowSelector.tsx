@@ -4,9 +4,14 @@
 // @bioagent/ui — WorkflowSelector
 // ============================================================
 // Dropdown to select and start a workflow.
+// GSAP drives dropdown open/close and list stagger entry.
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
 import { BioAgentClient } from "@/lib/bioagent-client";
+
+gsap.registerPlugin(useGSAP);
 
 export interface WorkflowInfo {
   name: string;
@@ -32,6 +37,9 @@ export default function WorkflowSelector({
   const [error, setError] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
 
+  const containerRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     if (!client) return;
 
@@ -56,10 +64,36 @@ export default function WorkflowSelector({
     [onSelect]
   );
 
+  // GSAP: dropdown open/close animation
+  useGSAP(
+    () => {
+      const mm = gsap.matchMedia();
+      mm.add("(prefers-reduced-motion: reduce)", () => {});
+      mm.add("(prefers-reduced-motion: no-preference)", () => {
+        if (isOpen && dropdownRef.current) {
+          // Stagger list items
+          const items =
+            dropdownRef.current.querySelectorAll<HTMLLIElement>("li");
+          if (items.length > 0) {
+            gsap.from(items, {
+              autoAlpha: 0,
+              y: 8,
+              stagger: 0.04,
+              duration: 0.25,
+              ease: "power2.out",
+            });
+          }
+        }
+      });
+      return () => mm.revert();
+    },
+    { scope: containerRef, dependencies: [isOpen] }
+  );
+
   const selectedWorkflow = workflows.find((w) => w.name === selected);
 
   return (
-    <div className="relative">
+    <div ref={containerRef} className="relative">
       <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">
         Workflow
       </label>
@@ -104,7 +138,10 @@ export default function WorkflowSelector({
       )}
 
       {isOpen && !disabled && (
-        <div className="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800">
+        <div
+          ref={dropdownRef}
+          className="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800"
+        >
           <ul className="max-h-60 overflow-auto py-1">
             {workflows.length === 0 && !isLoading && (
               <li className="px-3 py-2 text-sm text-gray-400">No workflows available</li>
