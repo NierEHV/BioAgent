@@ -1,5 +1,6 @@
 ---
 title: 分子生物学基础
+topic: biology.molecular-biology
 category: biology
 tags: [dna, rna, transcription, translation, central-dogma, epigenetics]
 updated: 2026-05-31

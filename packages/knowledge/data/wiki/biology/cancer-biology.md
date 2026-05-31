@@ -1,5 +1,6 @@
 ---
 title: 癌症生物学基础
+topic: biology.cancer-biology
 category: biology
 tags: [oncogene, tumor-suppressor, tme, metastasis, immunotherapy]
 updated: 2026-05-31

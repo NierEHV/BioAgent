@@ -1,5 +1,6 @@
 ---
 title: 批次效应校正指南
+topic: scrna-seq.batch-correction
 category: omics
 omics: scrna-seq
 tags: [batch-correction, harmony, scvi, integration, pca]

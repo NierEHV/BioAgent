@@ -1,5 +1,6 @@
 ---
 title: 免疫学基础
+topic: biology.immunology
 category: biology
 tags: [t-cell, b-cell, nk-cell, macrophage, innate-immunity, adaptive-immunity]
 updated: 2026-05-31

@@ -1,5 +1,6 @@
 ---
 title: 拟时间轨迹分析指南
+topic: scrna-seq.trajectory-analysis
 category: omics
 omics: scrna-seq
 tags: [trajectory, pseudotime, monocle3, scvelo, rna-velocity]

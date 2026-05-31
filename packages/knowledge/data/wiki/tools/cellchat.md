@@ -1,5 +1,6 @@
 ---
 title: CellChat 使用指南
+topic: tools.cellchat
 category: tools
 tool: cellchat
 language: R

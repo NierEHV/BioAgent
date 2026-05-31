@@ -1,5 +1,6 @@
 ---
 title: 细胞生物学基础
+topic: biology.cell-biology
 category: biology
 tags: [cell-cycle, apoptosis, differentiation, cell-types]
 updated: 2026-05-31

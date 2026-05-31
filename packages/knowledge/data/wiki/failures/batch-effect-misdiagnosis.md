@@ -1,5 +1,6 @@
 ---
 title: 案例：批次效应误诊为生物学差异
+topic: failures.batch-effect-misdiagnosis
 category: failures
 severity: major
 omics: scrna-seq

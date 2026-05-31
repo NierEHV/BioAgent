@@ -1,5 +1,6 @@
 ---
 title: 案例：过度校正消除真实生物学信号
+topic: failures.over-correction-warning
 category: failures
 severity: major
 omics: scrna-seq
