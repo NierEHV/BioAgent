@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BioAgent 项目管理系统 — 设计稿</title>
+<style>
+  :root {
+    --bg:#0d1117; --card:#161b22; --border:#30363d; --text:#e6edf3;
+    --muted:#8b949e; --accent:#58a6ff; --green:#3fb950; --orange:#d29922;
+    --red:#f85149; --purple:#a371f7; --pink:#db61a2;
+    --shadow:0 8px 32px rgba(0,0,0,.4);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg);color:var(--text);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;padding:24px}
+  h1{font-size:26px;margin-bottom:4px}
+  h2{font-size:18px;margin:36px 0 14px;padding-bottom:8px;border-bottom:2px solid var(--border)}
+  h3{font-size:14px;color:var(--accent);margin:16px 0 8px}
+  .subtitle{color:var(--muted);margin-bottom:24px}
+
+  .mockup{background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:var(--shadow);margin-bottom:24px}
+  .mockup-topbar{display:flex;align-items:center;gap:8px;padding:0 12px;height:36px;background:#1c2333;border-bottom:1px solid var(--border)}
+  .mockup-topbar .dot{width:10px;height:10px;border-radius:50%}
+  .mockup-topbar .dot.red{background:#ff5f57}
+  .mockup-topbar .dot.yellow{background:#febc2e}
+  .mockup-topbar .dot.green{background:#28c840}
+  .mockup-topbar .title{font-size:11px;color:var(--muted);margin-left:8px}
+  .mockup-body{display:flex;min-height:400px}
+
+  .sidebar{width:200px;flex-shrink:0;background:#12171f;border-right:1px solid var(--border);padding:8px}
+  .sidebar-title{font-size:10px;color:var(--muted);text-transform:uppercase;padding:8px 10px 4px;letter-spacing:1px}
+  .sidebar-item{padding:6px 10px;border-radius:6px;font-size:12px;color:var(--muted);margin-bottom:1px;display:flex;align-items:center;gap:8px;cursor:pointer}
+  .sidebar-item:hover{background:#1c2840}
+  .sidebar-item.active{background:#1c2840;color:var(--text)}
+  .sidebar-item .icon{font-size:14px}
+
+  .main-area{flex:1;padding:20px;overflow-y:auto;max-height:600px}
+
+  /* Dashboard cards */
+  .dash-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:20px}
+  .dash-grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px}
+  .dash-card{background:#0d1117;border:1px solid var(--border);border-radius:8px;padding:14px}
+  .dash-card-header{font-size:11px;color:var(--muted);text-transform:uppercase;margin-bottom:8px;letter-spacing:0.5px}
+  .dash-card-value{font-size:24px;font-weight:700;line-height:1.2}
+  .dash-card-value.green{color:var(--green)}
+  .dash-card-value.blue{color:var(--accent)}
+  .dash-card-value.orange{color:var(--orange)}
+  .dash-card-meta{font-size:11px;color:var(--muted);margin-top:4px}
+
+  /* Table */
+  .data-table{width:100%;border-collapse:collapse;font-size:12px}
+  .data-table th,.data-table td{padding:8px 12px;border-bottom:1px solid var(--border);text-align:left}
+  .data-table th{background:#12171f;font-weight:600;color:var(--muted);font-size:10px;text-transform:uppercase}
+  .data-table tr:hover{background:#1c2129}
+  .data-table .mono{font-family:"Cascadia Code",monospace;font-size:11px}
+
+  /* Badges */
+  .badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600}
+  .badge.ok{background:#0d2818;color:var(--green)}
+  .badge.warn{background:#281a0d;color:var(--orange)}
+  .badge.fail{background:#280d0d;color:var(--red)}
+  .badge.info{background:#0d1a28;color:var(--accent)}
+
+  /* Terminal / Init */
+  .terminal{background:#0d1117;border:1px solid var(--border);border-radius:8px;padding:16px;font-family:"Cascadia Code",monospace;font-size:12px;line-height:1.8}
+  .terminal .prompt{color:var(--green)}
+  .terminal .cmd{color:var(--text)}
+  .terminal .output{color:var(--muted)}
+  .terminal .highlight{color:var(--accent)}
+  .terminal .path{color:var(--orange)}
+
+  /* File tree */
+  .file-tree{font-family:"Cascadia Code",monospace;font-size:11px;line-height:1.8;background:#0d1117;border:1px solid var(--border);border-radius:8px;padding:14px}
+  .file-tree .d{color:var(--accent)}
+  .file-tree .f{color:var(--text)}
+  .file-tree .y{color:var(--orange)}
+  .file-tree .c{color:var(--muted);font-style:italic}
+
+  /* Timeline */
+  .timeline{position:relative;padding-left:24px}
+  .timeline::before{content:"";position:absolute;left:8px;top:4px;bottom:4px;width:2px;background:var(--border)}
+  .timeline-item{position:relative;margin-bottom:16px}
+  .timeline-item::before{content:"";position:absolute;left:-20px;top:6px;width:10px;height:10px;border-radius:50%;border:2px solid var(--accent);background:var(--bg)}
+  .timeline-item.done::before{background:var(--green);border-color:var(--green)}
+  .timeline-item.running::before{background:var(--accent);border-color:var(--accent);animation:pulse 1.5s infinite}
+  .timeline-item.fail::before{background:var(--red);border-color:var(--red)}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(88,166,255,0.4)}50%{box-shadow:0 0 0 6px rgba(88,166,255,0)}}
+  .timeline-time{font-size:10px;color:var(--muted)}
+  .timeline-title{font-size:13px;font-weight:600}
+  .timeline-detail{font-size:11px;color:var(--muted)}
+
+  /* Tabs */
+  .tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:16px}
+  .tab{padding:8px 16px;font-size:12px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:color .12s,border-color .12s}
+  .tab:hover{color:var(--text)}
+  .tab.active{color:var(--text);border-bottom-color:var(--accent)}
+
+  /* Init form */
+  .form-group{margin-bottom:14px}
+  .form-label{font-size:11px;color:var(--muted);margin-bottom:4px;display:block;text-transform:uppercase;letter-spacing:0.5px}
+  .form-input{width:100%;padding:8px 12px;background:#0d1117;border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;font-family:inherit}
+  .form-input:focus{outline:none;border-color:var(--accent)}
+  .form-select{width:100%;padding:8px 12px;background:#0d1117;border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px}
+  .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .form-hint{font-size:10px;color:var(--muted);margin-top:3px}
+
+  .btn{padding:8px 16px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:none;transition:background .12s}
+  .btn-primary{background:var(--accent);color:#000}
+  .btn-primary:hover{background:#7ab8ff}
+  .btn-secondary{background:#21262d;color:var(--text);border:1px solid var(--border)}
+  .btn-secondary:hover{background:#30363d}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  .section-nav{display:flex;gap:8px;margin:16px 0;flex-wrap:wrap}
+  .section-nav a{color:var(--accent);text-decoration:none;padding:6px 14px;border:1px solid var(--border);border-radius:20px;font-size:12px}
+  .section-nav a:hover{background:#1c2840}
+
+  .callout{padding:12px 16px;border-radius:8px;font-size:12px;margin:12px 0}
+  .callout.info{background:#0d1a28;border-left:3px solid var(--accent)}
+  .callout.warn{background:#281a0d;border-left:3px solid var(--orange)}
+</style>
+</head>
+<body>
+
+<h1>🧬 BioAgent 项目管理系统 — 设计稿</h1>
+<p class="subtitle">完整项目管理：初始化 → 追踪 → 可复现 → 导出</p>
+
+<div class="section-nav">
+  <a href="#init">1. 项目初始化</a>
+  <a href="#dashboard">2. 项目仪表盘</a>
+  <a href="#history">3. 分析历史</a>
+  <a href="#tracking">4. 参数追踪</a>
+  <a href="#reproduce">5. 可复现性</a>
+  <a href="#export">6. 导出/分享</a>
+</div>
+
+<!-- ====== 1. INIT ====== -->
+<h2 id="init">1. 项目初始化 — bioagent init</h2>
+
+<div class="grid2">
+  <!-- Terminal -->
+  <div>
+    <h3>命令行创建</h3>
+    <div class="terminal">
+      <span class="prompt">$</span> <span class="cmd">bioagent init scrna-lung-tme</span><br>
+      <span class="output">Creating project: <span class="path">scrna-lung-tme</span></span><br>
+      <span class="output">├── <span class="d">raw/</span>              # 原始数据</span><br>
+      <span class="output">├── <span class="d">intermediate/</span>     # 中间结果</span><br>
+      <span class="output">├── <span class="d">output/</span>          # 最终输出</span><br>
+      <span class="output">├── <span class="d">checkpoints/</span>     # 检查点</span><br>
+      <span class="output">├── <span class="d">notebooks/</span>       # 分析笔记</span><br>
+      <span class="output">├── <span class="y">project.yml</span>      # 项目配置</span><br>
+      <span class="output">├── <span class="y">Dockerfile.lock</span>  # 环境锁定</span><br>
+      <span class="output">└── <span class="f">README.md</span>        # 项目说明</span><br>
+      <br>
+      <span class="prompt">$</span> <span class="cmd">bioagent init scrna-lung-tme \</span><br>
+      <span class="cmd">  --omics scrna-seq \</span><br>
+      <span class="cmd">  --species human \</span><br>
+      <span class="cmd">  --reference GRCh38 \</span><br>
+      <span class="cmd">  --image rnakato/shortcake_full:latest</span><br>
+      <span class="output">✓ Project initialized with scRNA-seq preset</span><br>
+      <span class="output">✓ Docker image locked: rnakato/shortcake_full@sha256:a1b2...</span><br>
+      <span class="output">✓ Knowledge base primed for: human, lung, immune</span>
+    </div>
+  </div>
+
+  <!-- project.yml -->
+  <div>
+    <h3>project.yml — 项目元数据</h3>
+    <div class="file-tree">
+      <span class="c"># BioAgent Project Configuration</span><br>
+      <span class="y">name:</span> scrna-lung-tme<br>
+      <span class="y">version:</span> 1<br>
+      <span class="y">created:</span> "2026-06-01T10:30:00Z"<br>
+      <span class="y">updated:</span> "2026-06-01T14:22:00Z"<br>
+      <br>
+      <span class="c"># 实验设计</span><br>
+      <span class="y">omics:</span> scrna-seq<br>
+      <span class="y">species:</span> homo_sapiens<br>
+      <span class="y">reference_genome:</span> GRCh38<br>
+      <span class="y">tissue:</span> lung<br>
+      <span class="y">condition:</span> tumor_microenvironment<br>
+      <br>
+      <span class="c"># 样本信息</span><br>
+      <span class="y">samples:</span><br>
+      <span class="y">  - id:</span> TME01<br>
+      <span class="y">    condition:</span> tumor<br>
+      <span class="y">    file:</span> raw/TME01_filtered.h5ad<br>
+      <span class="y">    cells:</span> 8450<br>
+      <span class="y">  - id:</span> TME02<br>
+      <span class="y">    condition:</span> tumor<br>
+      <span class="y">    file:</span> raw/TME02_filtered.h5ad<br>
+      <span class="y">    cells:</span> 9120<br>
+      <br>
+      <span class="c"># 环境</span><br>
+      <span class="y">docker_image:</span> rnakato/shortcake_full:latest<br>
+      <span class="y">docker_digest:</span> sha256:a1b2c3d4...<br>
+      <span class="y">python_version:</span> "3.11"<br>
+    </div>
+  </div>
+</div>
+
+<!-- ====== 2. DASHBOARD ====== -->
+<h2 id="dashboard">2. 项目仪表盘 — BioAgent UI</h2>
+
+<div class="mockup">
+  <div class="mockup-topbar">
+    <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
+    <span class="title">BioAgent — scrna-lung-tme</span>
+  </div>
+  <div class="mockup-body">
+    <div class="sidebar">
+      <div class="sidebar-title">项目</div>
+      <div class="sidebar-item active"><span class="icon">📊</span> 仪表盘</div>
+      <div class="sidebar-item"><span class="icon">📁</span> 文件</div>
+      <div class="sidebar-item"><span class="icon">📜</span> 历史</div>
+      <div class="sidebar-item"><span class="icon">⚙️</span> 设置</div>
+      <div class="sidebar-title" style="margin-top:16px">会话</div>
+      <div class="sidebar-item"><span class="icon">💬</span> 分析对话 #3</div>
+      <div class="sidebar-item"><span class="icon">💬</span> 分析对话 #2</div>
+      <div class="sidebar-item"><span class="icon">💬</span> 初始设置 #1</div>
+    </div>
+    <div class="main-area">
+      <!-- Stats -->
+      <div class="dash-grid-3">
+        <div class="dash-card">
+          <div class="dash-card-header">📊 分析状态</div>
+          <div class="dash-card-value green">8/13</div>
+          <div class="dash-card-meta">Skill 已完成 · 当前: marker-detection</div>
+        </div>
+        <div class="dash-card">
+          <div class="dash-card-header">🧬 细胞统计</div>
+          <div class="dash-card-value blue">17,570</div>
+          <div class="dash-card-meta">2 样本 · QC 后保留 93.4%</div>
+        </div>
+        <div class="dash-card">
+          <div class="dash-card-header">🐳 环境</div>
+          <div class="dash-card-value" style="font-size:14px;color:var(--green)">✅ 已锁定</div>
+          <div class="dash-card-meta">rnakato/shortcake_full@sha256:a1b2...</div>
+        </div>
+      </div>
+
+      <!-- Pipeline progress -->
+      <h3 style="margin-bottom:10px">📈 分析管线进度</h3>
+      <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:20px">
+        <span class="badge ok">✓ import</span><span class="badge ok">✓ qc</span>
+        <span class="badge ok">✓ doublet</span><span class="badge ok">✓ normalize</span>
+        <span class="badge ok">✓ hvg</span><span class="badge ok">✓ pca</span>
+        <span class="badge ok">✓ batch</span><span class="badge ok">✓ umap</span>
+        <span class="badge ok">✓ cluster</span><span class="badge warn">⋯ annotate</span>
+        <span class="badge info">marker</span><span class="badge info">de</span>
+        <span class="badge info">enrich</span><span class="badge info">report</span>
+      </div>
+
+      <!-- Recent activity -->
+      <h3 style="margin-bottom:10px">📜 最近活动</h3>
+      <div class="timeline">
+        <div class="timeline-item done">
+          <div class="timeline-time">14:20</div>
+          <div class="timeline-title">✅ clustering — 完成</div>
+          <div class="timeline-detail">Leiden resolution=0.8, 12 clusters identified. QC: pass (silhouette=0.72)</div>
+        </div>
+        <div class="timeline-item running">
+          <div class="timeline-time">14:18</div>
+          <div class="timeline-title">🔄 cell-annotation — 进行中</div>
+          <div class="timeline-detail">CellTypist Immune_All_Low model, 12 clusters → annotating...</div>
+        </div>
+        <div class="timeline-item done">
+          <div class="timeline-time">14:15</div>
+          <div class="timeline-title">✅ umap-tsne — 完成</div>
+          <div class="timeline-detail">UMAP embedding computed, min_dist=0.3, n_neighbors=15</div>
+        </div>
+        <div class="timeline-item done">
+          <div class="timeline-time">14:10</div>
+          <div class="timeline-title">✅ batch-correction — 完成</div>
+          <div class="timeline-detail">Harmony integration, 2 batches corrected, theta=2</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== 3. HISTORY ====== -->
+<h2 id="history">3. 分析历史 — 可追溯的每一步</h2>
+
+<div class="mockup">
+  <div class="mockup-topbar">
+    <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
+    <span class="title">BioAgent — scrna-lung-tme / 历史记录</span>
+  </div>
+  <div class="mockup-body">
+    <div class="sidebar">
+      <div class="sidebar-title">Skill 历史</div>
+      <div class="sidebar-item active"><span class="icon">📊</span> 全部</div>
+      <div class="sidebar-item"><span class="icon">✅</span> 成功 (8)</div>
+      <div class="sidebar-item"><span class="icon">⚠️</span> 警告 (2)</div>
+      <div class="sidebar-item"><span class="icon">❌</span> 失败 (0)</div>
+    </div>
+    <div class="main-area">
+      <table class="data-table">
+        <tr><th>#</th><th>Skill</th><th>状态</th><th>参数</th><th>QC</th><th>输入</th><th>输出</th><th>时间</th><th>会话</th></tr>
+        <tr>
+          <td>8</td><td>clustering</td><td><span class="badge ok">pass</span></td>
+          <td class="mono">resolution=0.8, n_neighbors=15</td>
+          <td><span class="badge ok">3/3</span></td>
+          <td class="mono">umap.h5ad</td>
+          <td class="mono">clustered.h5ad</td>
+          <td>14:20</td>
+          <td>💬 #3</td>
+        </tr>
+        <tr style="background:#1a2a1a">
+          <td>7</td><td>umap-tsne</td><td><span class="badge ok">pass</span></td>
+          <td class="mono">min_dist=0.3, n_pcs=30</td>
+          <td><span class="badge ok">2/2</span></td>
+          <td class="mono">batch_corrected.h5ad</td>
+          <td class="mono">umap.h5ad</td>
+          <td>14:15</td>
+          <td>💬 #2</td>
+        </tr>
+        <tr>
+          <td>6</td><td>batch-correction</td><td><span class="badge ok">pass</span></td>
+          <td class="mono">method=harmony, theta=2</td>
+          <td><span class="badge ok">2/2</span></td>
+          <td class="mono">pca.h5ad</td>
+          <td class="mono">batch_corrected.h5ad</td>
+          <td>14:10</td>
+          <td>💬 #2</td>
+        </tr>
+        <tr>
+          <td>5</td><td>scrna-pca</td><td><span class="badge ok">pass</span></td>
+          <td class="mono">n_comps=50, svd_solver=arpack</td>
+          <td><span class="badge ok">2/2</span></td>
+          <td class="mono">hvg.h5ad</td>
+          <td class="mono">pca.h5ad</td>
+          <td>14:05</td>
+          <td>💬 #2</td>
+        </tr>
+        <tr>
+          <td>4</td><td>hvg-selection</td><td><span class="badge ok">pass</span></td>
+          <td class="mono">n_top_genes=2000, flavor=seurat_v3</td>
+          <td><span class="badge ok">2/2</span></td>
+          <td class="mono">normalized.h5ad</td>
+          <td class="mono">hvg.h5ad</td>
+          <td>14:02</td>
+          <td>💬 #2</td>
+        </tr>
+        <tr>
+          <td>3</td><td>scrna-normalize</td><td><span class="badge ok">pass</span></td>
+          <td class="mono">target_sum=1e4, log1p</td>
+          <td><span class="badge ok">1/1</span></td>
+          <td class="mono">doublet_free.h5ad</td>
+          <td class="mono">normalized.h5ad</td>
+          <td>13:58</td>
+          <td>💬 #2</td>
+        </tr>
+        <tr>
+          <td>2</td><td>doublet-detection</td><td><span class="badge ok">pass</span></td>
+          <td class="mono">expected_rate=0.06</td>
+          <td><span class="badge ok">2/2</span></td>
+          <td class="mono">qc_filtered.h5ad</td>
+          <td class="mono">doublet_free.h5ad</td>
+          <td>13:55</td>
+          <td>💬 #1</td>
+        </tr>
+        <tr>
+          <td>1</td><td>scrna-qc</td><td><span class="badge warn">warn</span></td>
+          <td class="mono">min_genes=200, pct_mt=20</td>
+          <td><span class="badge warn">2/3</span></td>
+          <td class="mono">imported.h5ad</td>
+          <td class="mono">qc_filtered.h5ad</td>
+          <td>13:50</td>
+          <td>💬 #1</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ====== 4. PARAM TRACKING ====== -->
+<h2 id="tracking">4. 参数追踪 — 每一步都可复现</h2>
+
+<div class="grid2">
+  <div>
+    <h3>每个 Skill 执行的参数快照</h3>
+    <div class="file-tree">
+      <span class="c"># checkpoints/clustering_20260601_142000.json</span><br>
+      {<br>
+      <span class="y">  "skill":</span> "clustering",<br>
+      <span class="y">  "version":</span> "1.0.0",<br>
+      <span class="y">  "timestamp":</span> "2026-06-01T14:20:00Z",<br>
+      <span class="y">  "session_id":</span> "019e7df3-...",<br>
+      <span class="y">  "params":</span> {<br>
+      <span class="y">    "resolution":</span> 0.8,<br>
+      <span class="y">    "n_neighbors":</span> 15,<br>
+      <span class="y">    "n_pcs":</span> 30,<br>
+      <span class="y">    "algorithm":</span> "leiden"<br>
+      },<br>
+      <span class="y">  "input":</span> {<br>
+      <span class="y">    "file":</span> "intermediate/umap.h5ad",<br>
+      <span class="y">    "sha256":</span> "e3b0c442...",<br>
+      <span class="y">    "cells":</span> 17570,<br>
+      <span class="y">    "genes":</span> 2000<br>
+      },<br>
+      <span class="y">  "output":</span> {<br>
+      <span class="y">    "file":</span> "intermediate/clustered.h5ad",<br>
+      <span class="y">    "sha256":</span> "d4c3b2a1...",<br>
+      <span class="y">    "clusters":</span> 12<br>
+      },<br>
+      <span class="y">  "environment":</span> {<br>
+      <span class="y">    "docker_image":</span> "rnakato/shortcake_full",<br>
+      <span class="y">    "docker_digest":</span> "sha256:a1b2c3...",<br>
+      <span class="y">    "scanpy_version":</span> "1.10.1",<br>
+      <span class="y">    "python_version":</span> "3.11.9"<br>
+      },<br>
+      <span class="y">  "qc":</span> {<br>
+      <span class="y">    "overall":</span> "pass",<br>
+      <span class="y">    "silhouette_score":</span> 0.72,<br>
+      <span class="y">    "n_clusters":</span> 12<br>
+      },<br>
+      <span class="y">  "duration_ms":</span> 283000<br>
+      }
+    </div>
+  </div>
+
+  <div>
+    <h3>参数对比 — 不同运行间的差异追踪</h3>
+    <table class="data-table">
+      <tr><th>参数</th><th>Run #1 (14:20)</th><th>Run #2 (13:00)</th><th>Δ</th></tr>
+      <tr><td>resolution</td><td class="mono">0.8</td><td class="mono">1.0</td><td style="color:var(--orange)">-0.2</td></tr>
+      <tr><td>n_neighbors</td><td class="mono">15</td><td class="mono">15</td><td>=</td></tr>
+      <tr><td>n_pcs</td><td class="mono">30</td><td class="mono">50</td><td style="color:var(--orange)">-20</td></tr>
+      <tr><td>n_clusters</td><td class="mono">12</td><td class="mono">18</td><td style="color:var(--orange)">-6</td></tr>
+      <tr><td>silhouette</td><td class="mono">0.72</td><td class="mono">0.58</td><td style="color:var(--green)">+0.14</td></tr>
+      <tr><td>duration</td><td class="mono">283s</td><td class="mono">412s</td><td style="color:var(--green)">-129s</td></tr>
+    </table>
+    <div class="callout info" style="margin-top:14px">
+      💡 参数快照自动保存到 checkpoints/ 目录，JSON 格式。
+      每次重新运行 Skill 产生新快照，支持对比和回滚。
+    </div>
+  </div>
+</div>
+
+<!-- ====== 5. REPRODUCIBILITY ====== -->
+<h2 id="reproduce">5. 可复现性 — Docker 环境锁定</h2>
+
+<div class="grid2">
+  <div>
+    <h3>Dockerfile.lock — 环境快照</h3>
+    <div class="file-tree">
+      <span class="c"># 自动生成 — 记录分析时的确切环境</span><br>
+      <span class="y">base_image:</span> rnakato/shortcake_full:latest<br>
+      <span class="y">digest:</span> sha256:a1b2c3d4e5f6...<br>
+      <span class="y">pulled_at:</span> "2026-06-01T10:30:00Z"<br>
+      <br>
+      <span class="y">python:</span><br>
+      <span class="y">  version:</span> 3.11.9<br>
+      <span class="y">  packages:</span><br>
+      <span class="y">    scanpy:</span> 1.10.1<br>
+      <span class="y">    scvelo:</span> 0.3.2<br>
+      <span class="y">    scrublet:</span> 0.2.3<br>
+      <span class="y">    harmony-pytorch:</span> 0.1.9<br>
+      <span class="y">    celltypist:</span> 1.6.3<br>
+      <span class="y">    gseapy:</span> 1.1.5<br>
+      <br>
+      <span class="y">r:</span><br>
+      <span class="y">  version:</span> 4.4.1<br>
+      <span class="y">  packages:</span><br>
+      <span class="y">    Seurat:</span> 5.1.0<br>
+      <span class="y">    Monocle3:</span> 1.3.7<br>
+      <span class="y">    CellChat:</span> 2.1.2<br>
+    </div>
+  </div>
+
+  <div>
+    <h3>复现命令</h3>
+    <div class="terminal" style="margin-bottom:14px">
+      <span class="c"># 一键复现整个分析</span><br>
+      <span class="prompt">$</span> <span class="cmd">bioagent reproduce scrna-lung-tme</span><br>
+      <span class="output">✓ Pulling image: rnakato/shortcake_full@sha256:a1b2...</span><br>
+      <span class="output">✓ Restoring parameters from checkpoints/</span><br>
+      <span class="output">✓ Replaying 13 Skills in DAG order...</span><br>
+      <span class="output">  1/13 import — ✅ (cached)</span><br>
+      <span class="output">  2/13 qc — ✅ (cached)</span><br>
+      <span class="output">  ...</span><br>
+      <span class="output">  13/13 report — ✅</span><br>
+      <span class="output">✓ Reproduced successfully. Output: output/report.html</span>
+    </div>
+
+    <div class="terminal">
+      <span class="c"># 或导出为 Docker Compose</span><br>
+      <span class="prompt">$</span> <span class="cmd">bioagent export docker scrna-lung-tme</span><br>
+      <span class="output">✓ Exported: scrna-lung-tme/docker-compose.reproduce.yml</span><br>
+      <span class="output">✓ Includes: image lock + volume mounts + analysis script</span>
+    </div>
+
+    <div class="callout info" style="margin-top:14px">
+      🔒 <strong>镜像锁定</strong>是 BioAgent 可复现的核心——不仅记录镜像名，还记录 digest hash。
+      即使 Docker Hub 上的镜像更新了，复现时仍使用完全相同的版本。
+    </div>
+  </div>
+</div>
+
+<!-- ====== 6. EXPORT ====== -->
+<h2 id="export">6. 导出 / 分享 — 面向发布</h2>
+
+<div class="mockup">
+  <div class="mockup-topbar">
+    <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
+    <span class="title">BioAgent — 导出项目</span>
+  </div>
+  <div class="mockup-body">
+    <div class="main-area" style="max-height:350px">
+      <div class="dash-grid-3">
+        <div class="dash-card" style="cursor:pointer;border:2px solid var(--accent)">
+          <div style="font-size:28px;margin-bottom:8px">📦</div>
+          <div style="font-weight:600;margin-bottom:4px">BioAgent Bundle</div>
+          <div style="font-size:11px;color:var(--muted)">完整项目打包<br>数据 + 环境 + 历史 + 报告<br><span style="color:var(--accent)">其他人可直接 bioagent reproduce</span></div>
+        </div>
+        <div class="dash-card" style="cursor:pointer">
+          <div style="font-size:28px;margin-bottom:8px">🐳</div>
+          <div style="font-weight:600;margin-bottom:4px">Docker Compose</div>
+          <div style="font-size:11px;color:var(--muted)">容器化复现环境<br>docker compose up 一键运行<br>适合在 HPC/云平台复现</div>
+        </div>
+        <div class="dash-card" style="cursor:pointer">
+          <div style="font-size:28px;margin-bottom:8px">📄</div>
+          <div style="font-weight:600;margin-bottom:4px">HTML 报告</div>
+          <div style="font-size:11px;color:var(--muted)">交互式分析报告<br>包含图表 + 方法 + 参数<br>可直接作为论文补充材料</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== SUMMARY ====== -->
+<h2>📋 实现清单</h2>
+
+<table class="data-table">
+  <tr><th>模块</th><th>核心文件</th><th>优先级</th><th>状态</th></tr>
+  <tr><td>1. 项目初始化</td><td class="mono">bioagent init 命令, project.yml schema</td><td>🔴 P0</td><td>待开发</td></tr>
+  <tr><td>2. 项目仪表盘</td><td class="mono">ProjectDashboard.tsx, /api/projects/[id]</td><td>🔴 P0</td><td>待开发</td></tr>
+  <tr><td>3. 分析历史</td><td class="mono">HistoryTable.tsx, checkpoints/*.json</td><td>🟡 P1</td><td>checkpoint 已有基础</td></tr>
+  <tr><td>4. 参数追踪</td><td class="mono">CheckpointManager (已有), 参数对比 UI</td><td>🟡 P1</td><td>checkpoint 已有</td></tr>
+  <tr><td>5. 环境锁定</td><td class="mono">Dockerfile.lock, ImageManager.inspect</td><td>🟡 P1</td><td>inspect 已有</td></tr>
+  <tr><td>6. 导出/复现</td><td class="mono">bioagent export, bioagent reproduce</td><td>🟢 P2</td><td>待开发</td></tr>
+</table>
+
+<script>
+document.querySelectorAll('.section-nav a').forEach(a=>{
+  a.addEventListener('click',e=>{
+    e.preventDefault();
+    const t=document.querySelector(a.getAttribute('href'));
+    if(t)t.scrollIntoView({behavior:'smooth'});
+  });
+});
+</script>
+</body>
+</html>
