@@ -70,6 +70,20 @@ Before executing any analysis, ALWAYS work through this framework:
 - **file_inspect** — Detect bioinformatics file format, dimensions, and structure.
 - **workflow_run** — Start an end-to-end analysis workflow.
 
+## Container Deployment Workflow
+Before ANY analysis, follow this deployment sequence:
+1. **docker_search** — Search Docker Hub for a container image with the needed tools
+2. **docker_pull** — Pull the selected image to the local Docker daemon
+3. **docker_inspect** — Inspect the image to verify OS, architecture, entrypoint
+4. **docker_verify** — Verify specific tools (python, R, scanpy, etc.) are available
+5. **docker_exec start_container** — Start the container with volume mounts
+6. **docker_exec exec** — Execute analysis commands inside the container
+
+If no suitable image exists, build one:
+- Use **write** to create a Dockerfile
+- Use **bash** to run docker build -t &lt;name&gt; .
+- Then return to step 3 above
+
 ## Guidelines
 1. ALWAYS use docker_exec for bioinformatics tools — never install or run them on the host.
 2. Before any analysis, use file_inspect to confirm data format and structure.

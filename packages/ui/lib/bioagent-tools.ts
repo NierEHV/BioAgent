@@ -209,6 +209,142 @@ export const dockerSearchTool = createSimpleTool({
 });
 
 // ============================================================================
+// Tool: docker_pull → @bioagent/executor
+// ============================================================================
+
+export const dockerPullTool = createSimpleTool({
+  name: "docker_pull",
+  label: "Docker Pull",
+  description: `Pull a Docker image from a registry. Returns image digest, total size, and layer count after pull completes.`,
+  promptSnippet: "docker_pull(image, platform?)",
+  promptGuidelines: [
+    "Always pull images before starting containers.",
+    "Prefer biocontainers (quay.io/biocontainers) for bioinformatics tools.",
+    "Specify exact tags — avoid ':latest' in production workflows.",
+  ],
+  async execute(params: any): Promise<string> {
+    const { ImageManager } = await import("@bioagent/executor");
+    const img = new ImageManager();
+    const result = await img.pull(params.image as string, {
+      platform: params.platform as string | undefined,
+    });
+    return `Pulled: ${result.image}\nSize: ${(result.totalSize / 1e6).toFixed(1)} MB\nLayers: ${result.layers}\nDigest: ${result.digest}`;
+  },
+});
+
+// ============================================================================
+// Tool: docker_inspect → @bioagent/executor
+// ============================================================================
+
+export const dockerInspectTool = createSimpleTool({
+  name: "docker_inspect",
+  label: "Docker Inspect",
+  description: `Inspect a Docker image to see metadata: OS, architecture, entrypoint, default command, env vars, and filesystem layers.`,
+  promptSnippet: "docker_inspect(image)",
+  promptGuidelines: [
+    "Inspect an image BEFORE starting a container to understand its contents.",
+    "Check ENTRYPOINT and CMD to know how the container runs.",
+    "Verify OS/Architecture compatibility with the host.",
+  ],
+  async execute(params: any): Promise<string> {
+    const { ImageManager } = await import("@bioagent/executor");
+    const img = new ImageManager();
+    const info = await img.inspect(params.image as string);
+    const lines = [
+      `Image: ${params.image}`,
+      `Created: ${info.Created}`,
+      `Size: ${(info.Size / 1e6).toFixed(1)} MB`,
+      `OS: ${info.Os} | Arch: ${info.Architecture}`,
+    ];
+    if (info.Config) {
+      if (info.Config.Entrypoint) lines.push(`Entrypoint: ${info.Config.Entrypoint.join(" ")}`);
+      if (info.Config.Cmd) lines.push(`Cmd: ${info.Config.Cmd.join(" ")}`);
+      if (info.Config.Env) lines.push(`Env (${info.Config.Env.length} vars): ${info.Config.Env.slice(0, 5).join(", ")}${info.Config.Env.length > 5 ? "..." : ""}`);
+    }
+    if (info.RootFS?.Layers) {
+      lines.push(`Layers: ${info.RootFS.Layers.length}`);
+    }
+    return lines.join("\n");
+  },
+});
+
+// ============================================================================
+// Tool: docker_verify → @bioagent/executor
+// ============================================================================
+
+export const dockerVerifyTool = createSimpleTool({
+  name: "docker_verify",
+  label: "Docker Verify",
+  description: `Verify whether specific tools are installed inside a Docker image. Tries 'which <tool>' and '<tool> --version' for each tool, returning availability.`,
+  promptSnippet: "docker_verify(image, tools[])",
+  promptGuidelines: [
+    "Verify tools BEFORE analysis to avoid mid-pipeline failures.",
+    "If a tool is missing, search for another image with docker_search.",
+    "Check both the tool binary AND version output.",
+  ],
+  async execute(params: any): Promise<string> {
+    const Docker = (await import("dockerode")).default;
+    const { ContainerManager } = await import("@bioagent/executor");
+    const docker = new Docker({
+      socketPath: process.platform === "win32"
+        ? "//./pipe/dockerDesktopLinuxEngine"
+        : "/var/run/docker.sock",
+    });
+    const cm = new ContainerManager();
+
+    const image = params.image as string;
+    const tools = (params.tools as string[]) || [];
+
+    // Ensure image exists
+    try { await docker.getImage(image).inspect(); } catch {
+      return `Image ${image} not found locally. Use docker_pull first.`;
+    }
+
+    // Start a temporary container
+    const name = `verify_${Date.now()}`;
+    const container = await docker.createContainer({
+      Image: image,
+      name,
+      Cmd: ["sleep", "infinity"],
+    });
+    await container.start();
+
+    const results: string[] = [];
+    for (const tool of tools) {
+      try {
+        const exec = await container.exec({
+          Cmd: ["sh", "-c", `which ${tool} 2>/dev/null && ${tool} --version 2>&1 | head -1 || echo "NOT FOUND"`],
+          AttachStdout: true,
+          AttachStderr: true,
+        });
+        const stream = await exec.start({ hijack: true, Detach: false });
+        let output = "";
+        await new Promise<void>((resolve) => {
+          setTimeout(() => resolve(), 5000);
+          (docker.modem as any).demuxStream(
+            stream,
+            { write: (c: any) => { output += c.toString(); return true; } },
+            { write: () => true },
+          );
+          stream.on("end", () => resolve());
+          stream.on("error", () => resolve());
+        });
+        const found = !output.includes("NOT FOUND");
+        results.push(found ? `✅ ${tool}: ${output.trim()}` : `❌ ${tool}: not found`);
+      } catch {
+        results.push(`❌ ${tool}: verification failed`);
+      }
+    }
+
+    // Cleanup
+    await container.stop({ t: 0 }).catch(() => {});
+    await container.remove({ force: true }).catch(() => {});
+
+    return [`Tool verification for ${image}:`, "", ...results, "", `Summary: ${results.filter(r => r.startsWith("✅")).length}/${tools.length} tools available`].join("\n");
+  },
+});
+
+// ============================================================================
 // Tool: bio_kb_query → @bioagent/knowledge (WikiLoader + KnowledgeBridge)
 // ============================================================================
 
@@ -446,6 +582,9 @@ Available workflows: scrna-seq-standard (13 Skills: import → qc → doublet �
 export const bioagentTools = [
   dockerExecTool,       // → @bioagent/executor (ContainerManager)
   dockerSearchTool,     // → @bioagent/executor (ImageSearchService)
+  dockerPullTool,       // → @bioagent/executor (ImageManager.pull)
+  dockerInspectTool,    // → @bioagent/executor (ImageManager.inspect)
+  dockerVerifyTool,     // → @bioagent/executor (ContainerManager + dockerode)
   bioKbQueryTool,       // → @bioagent/knowledge (WikiLoader)
   bioFileInspectTool,   // → local fs (fast, no Docker)
   bioSkillInvokeTool,   // → @bioagent/skills (SkillRegistry)
