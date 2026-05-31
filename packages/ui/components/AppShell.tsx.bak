@@ -47,7 +47,7 @@ export function AppShell() {
   // ---------------------------------------------------------------------------
   // BioAgent — right-side bioinformatics panel state
   // ---------------------------------------------------------------------------
-  const [bioPanelOpen, setBioPanelOpen] = useState(false);
+  const [bioPanelOpen, setBioPanelOpen] = useState(true);
   const [activeBioTab, setActiveBioTab] = useState<"thinking" | "progress" | "qc" | "viz" | "knowledge">("thinking");
 
   // Bioagent data — in production these come from SSE events / API
