@@ -13,6 +13,12 @@ export {
   calculateCPUPercent,
 } from "./container-manager.js";
 
+export { ImageManager } from "./image-manager.js";
+export { VolumeManager } from "./volume-manager.js";
+export { ResourceProbe } from "./resource-probe.js";
+export { ImageSearchService, daysAgo } from "./image-search.js";
+export { DockerExecutor } from "./docker-executor.js";
+
 export type {
   ContainerConfig,
   VolumeMount,
