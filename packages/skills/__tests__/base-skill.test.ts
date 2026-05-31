@@ -3,7 +3,7 @@
 // ============================================================
 
 import { describe, it, expect, beforeEach } from "vitest";
-import { BaseSkill } from "../src/base-skill.js";
+import { BaseSkill } from "../src/base-skill";
 import type {
   SkillSpec,
   SkillContext,
@@ -13,7 +13,7 @@ import type {
   ValidationResult,
   ToolChoice,
   DataContext,
-} from "../src/base-skill.types.js";
+} from "../src/base-skill.types";
 import type { ResourceReport } from "@bioagent/executor";
 
 // ---------------------------------------------------------------------------

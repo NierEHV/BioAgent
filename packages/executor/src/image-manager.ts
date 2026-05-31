@@ -3,7 +3,7 @@
 // ============================================================
 
 import Docker from "dockerode";
-import type { PullProgress, PullResult, ImageInfo } from "./types.js";
+import type { PullProgress, PullResult, ImageInfo } from "./types";
 
 // ---------------------------------------------------------------------------
 // ImageManager

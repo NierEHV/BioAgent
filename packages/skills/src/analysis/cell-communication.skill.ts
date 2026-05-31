@@ -9,11 +9,11 @@
 // - interactions_found: at least 10 significant LR pairs detected
 // - signaling_pathways: at least 1 signaling pathway identified
 
-import { BaseSkill } from "../base-skill.js";
+import { BaseSkill } from "../base-skill";
 import type {
   SkillSpec, SkillContext, SkillExecResult, QCReport,
   SkillOutput, ValidationResult, ToolChoice, DataContext,
-} from "../base-skill.types.js";
+} from "../base-skill.types";
 import type { ResourceReport } from "@bioagent/executor";
 
 export class CellCommunicationSkill extends BaseSkill {

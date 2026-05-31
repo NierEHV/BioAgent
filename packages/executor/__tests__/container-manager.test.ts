@@ -3,7 +3,7 @@
 // ============================================================
 
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { ContainerManager } from "../src/container-manager.js";
+import { ContainerManager } from "../src/container-manager";
 
 const TEST_IMAGE = "bioagent-scrna:latest";
 const TEST_CONTAINER = "bioagent-test-cm";

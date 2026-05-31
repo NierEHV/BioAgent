@@ -3,8 +3,8 @@
 // ============================================================
 
 import { describe, it, expect } from "vitest";
-import { WorkflowScheduler } from "../src/scheduler.js";
-import type { WorkflowNode, NodeState } from "../src/engine.types.js";
+import { WorkflowScheduler } from "../src/scheduler";
+import type { WorkflowNode, NodeState } from "../src/engine.types";
 
 function makeNode(
   id: string,

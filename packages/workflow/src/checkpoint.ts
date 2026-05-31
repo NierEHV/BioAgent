@@ -5,7 +5,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { randomUUID } from "node:crypto";
-import type { CheckpointData, WorkflowState } from "./engine.types.js";
+import type { CheckpointData, WorkflowState } from "./engine.types";
 
 /**
  * 检查点管理器。
@@ -249,7 +249,7 @@ export class CheckpointManager {
    */
   async restore(checkpoint: CheckpointData): Promise<WorkflowState> {
     // 将普通对象转换为 Map
-    const nodeStates = new Map<string, import("./engine.types.js").NodeState>();
+    const nodeStates = new Map<string, import("./engine.types").NodeState>();
 
     for (const [nodeId, state] of Object.entries(checkpoint.nodeStates)) {
       nodeStates.set(nodeId, state);

@@ -23,7 +23,10 @@ export async function GET(req: NextRequest) {
     const wikiPath = resolve(
       join(process.cwd(), "..", "knowledge", "data", "wiki"),
     );
-    const { WikiLoader } = await import("@bioagent/knowledge");
+    // Import WikiLoader directly to avoid triggering KuzuDB native module via barrel
+    const { WikiLoader } = await import(
+      "../../../../knowledge/src/wiki/wiki-loader"
+    );
     const loader = new WikiLoader(wikiPath);
     await loader.loadIndex();
 

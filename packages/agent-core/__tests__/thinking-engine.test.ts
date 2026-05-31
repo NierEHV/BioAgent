@@ -3,8 +3,8 @@
 // ============================================================
 
 import { describe, it, expect } from "vitest";
-import { ThinkingEngine } from "../src/thinking-engine.js";
-import { THINKING_TEMPLATE, renderTemplate } from "../src/thinking-template.js";
+import { ThinkingEngine } from "../src/thinking-engine";
+import { THINKING_TEMPLATE, renderTemplate } from "../src/thinking-template";
 
 describe("thinking-template", () => {
   describe("renderTemplate", () => {

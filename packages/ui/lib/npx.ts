@@ -20,9 +20,9 @@ function findNpxCli(): string | null {
   const nodeDir = dirname(execPath);
   const candidates = [
     // Windows MSI installer layout: node.exe and node_modules share a dir
-    join(nodeDir, "node_modules", "npm", "bin", "npx-cli.js"),
+    join(nodeDir, "node_modules", "npm", "bin", "npx-cli"),
     // Unix layout: .../bin/node + .../lib/node_modules/npm/bin/npx-cli.js
-    join(nodeDir, "..", "lib", "node_modules", "npm", "bin", "npx-cli.js"),
+    join(nodeDir, "..", "lib", "node_modules", "npm", "bin", "npx-cli"),
   ];
   for (const p of candidates) {
     try {

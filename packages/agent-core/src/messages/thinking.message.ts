@@ -2,7 +2,7 @@
 // @bioagent/agent-core — ThinkingMessage
 // ============================================================
 
-import type { ThinkingSection } from "../types.js";
+import type { ThinkingSection } from "../types";
 
 /**
  * Thinking message — captures the structured thinking process output.

@@ -5,8 +5,8 @@
 // ---------------------------------------------------------------------------
 // Vector DB (ChromaDB)
 // ---------------------------------------------------------------------------
-export { COLLECTIONS } from "./vector-db/collections.js";
-export type { CollectionName } from "./vector-db/collections.js";
+export { COLLECTIONS } from "./vector-db/collections";
+export type { CollectionName } from "./vector-db/collections";
 
 export {
   ChromaClientWrapper,
@@ -14,7 +14,7 @@ export {
   type QueryOptions,
   type QueryResponse,
   type SimpleEmbeddingFunction,
-} from "./vector-db/chroma-client.js";
+} from "./vector-db/chroma-client";
 
 // ---------------------------------------------------------------------------
 // Graph DB (KuzuDB)
@@ -24,7 +24,7 @@ export {
   REL_TABLES,
   type NodeTableDef,
   type RelTableDef,
-} from "./graph-db/schema.js";
+} from "./graph-db/schema";
 
 export {
   KuzuClient,
@@ -32,14 +32,14 @@ export {
   type KuzuStats,
   type GraphPath,
   type KnowledgeConflict,
-} from "./graph-db/kuzu-client.js";
+} from "./graph-db/kuzu-client";
 
 // ---------------------------------------------------------------------------
 // Wiki
 // ---------------------------------------------------------------------------
 export {
   WikiLoader,
-} from "./wiki/wiki-loader.js";
+} from "./wiki/wiki-loader";
 
 export {
   parseWikiFile,
@@ -47,12 +47,12 @@ export {
   searchWiki,
   type WikiDocFull,
   type WikiDocFrontmatter,
-} from "./wiki/wiki-parser.js";
+} from "./wiki/wiki-parser";
 
 // ---------------------------------------------------------------------------
 // Knowledge Bridge
 // ---------------------------------------------------------------------------
-export { KnowledgeBridge } from "./bridge.js";
+export { KnowledgeBridge } from "./bridge";
 
 export type {
   KnowledgeBridgeConfig,
@@ -62,7 +62,7 @@ export type {
   SimilarCase,
   GraphEntity,
   WikiDocument,
-} from "./bridge.types.js";
+} from "./bridge.types";
 
 // ---------------------------------------------------------------------------
 // Embedder (§4.1: vector-db/embedder.ts)
@@ -70,26 +70,26 @@ export type {
 export {
   LocalBowEmbedder,
   createEmbedder,
-} from "./vector-db/embedder.js";
-export type { Embedder, EmbedderConfig } from "./vector-db/embedder.js";
+} from "./vector-db/embedder";
+export type { Embedder, EmbedderConfig } from "./vector-db/embedder";
 
 // ---------------------------------------------------------------------------
 // Graph Queries (§4.1: graph-db/queries.ts)
 // ---------------------------------------------------------------------------
-export { QUERIES } from "./graph-db/queries.js";
-export type { QueryName, GraphQuery } from "./graph-db/queries.js";
+export { QUERIES } from "./graph-db/queries";
+export type { QueryName, GraphQuery } from "./graph-db/queries";
 
 // ---------------------------------------------------------------------------
 // Graph Seed Data Loader (§4.1: graph-db/seed-data.ts)
 // ---------------------------------------------------------------------------
-export { seedGraphFromCSV } from "./graph-db/seed-data.js";
-export type { SeedDataSource, SeedResult } from "./graph-db/seed-data.js";
+export { seedGraphFromCSV } from "./graph-db/seed-data";
+export type { SeedDataSource, SeedResult } from "./graph-db/seed-data";
 
 // ---------------------------------------------------------------------------
 // Wiki Index (§4.1: wiki/wiki-index.ts)
 // ---------------------------------------------------------------------------
-export { WikiIndex } from "./wiki/wiki-index.js";
-export type { WikiIndexEntry } from "./wiki/wiki-index.js";
+export { WikiIndex } from "./wiki/wiki-index";
+export type { WikiIndexEntry } from "./wiki/wiki-index";
 
 // ---------------------------------------------------------------------------
 // Seed Data
@@ -101,7 +101,7 @@ export {
   SEED_PATHWAYS,
   SEED_TOOLS,
   LITERATURE_SNIPPETS,
-} from "./seed/scrna-seed.js";
+} from "./seed/scrna-seed";
 
 // ---------------------------------------------------------------------------
 // Biology Seed (§4.1: seed/biology-seed.ts)
@@ -109,8 +109,8 @@ export {
 export {
   BIOLOGY_CONCEPTS,
   biologyConceptsToSnippets,
-} from "./seed/biology-seed.js";
-export type { BiologyConcept } from "./seed/biology-seed.js";
+} from "./seed/biology-seed";
+export type { BiologyConcept } from "./seed/biology-seed";
 
 // ---------------------------------------------------------------------------
 // Tool Seed (§4.1: seed/tool-seed.ts)
@@ -118,5 +118,5 @@ export type { BiologyConcept } from "./seed/biology-seed.js";
 export {
   TOOL_EXPERIENCES,
   toolExperiencesToSnippets,
-} from "./seed/tool-seed.js";
-export type { ToolExperience } from "./seed/tool-seed.js";
+} from "./seed/tool-seed";
+export type { ToolExperience } from "./seed/tool-seed";

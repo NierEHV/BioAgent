@@ -5,7 +5,7 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import type { KuzuClient } from "./kuzu-client.js";
+import type { KuzuClient } from "./kuzu-client";
 
 export interface SeedDataSource {
   genes?: string;

@@ -5,11 +5,11 @@
 import { randomUUID } from "node:crypto";
 import type { SkillExecutor, SkillResult } from "@bioagent/skills";
 import type { ContainerManager } from "@bioagent/executor";
-import { WorkflowRegistry } from "./registry.js";
-import { CheckpointManager } from "./checkpoint.js";
-import { WorkflowScheduler } from "./scheduler.js";
-import { evaluateCondition } from "./condition.js";
-import { applyErrorPolicy } from "./error-policy.js";
+import { WorkflowRegistry } from "./registry";
+import { CheckpointManager } from "./checkpoint";
+import { WorkflowScheduler } from "./scheduler";
+import { evaluateCondition } from "./condition";
+import { applyErrorPolicy } from "./error-policy";
 import type {
   WorkflowDef,
   WorkflowNode,
@@ -17,7 +17,7 @@ import type {
   NodeState,
   ErrorPolicy,
   CheckpointData,
-} from "./engine.types.js";
+} from "./engine.types";
 
 /**
  * 工作流引擎。

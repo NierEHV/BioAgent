@@ -4,7 +4,7 @@
 
 import { mkdirSync, existsSync, rmSync, statfsSync } from "node:fs";
 import { join } from "node:path";
-import type { VolumeMount } from "./types.js";
+import type { VolumeMount } from "./types";
 
 // ---------------------------------------------------------------------------
 // VolumeManager

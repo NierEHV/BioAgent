@@ -6,7 +6,7 @@ import type {
   WorkflowNode,
   WorkflowState,
   ErrorPolicy,
-} from "./engine.types.js";
+} from "./engine.types";
 
 /**
  * 应用错误策略的结果。

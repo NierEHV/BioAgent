@@ -5,16 +5,16 @@
 import { describe, it, expect } from "vitest";
 
 // Import all tool schemas
-import { dockerExecToolSchema } from "../../src/tools/docker-exec.tool.js";
-import { dockerSearchToolSchema } from "../../src/tools/docker-search.tool.js";
-import { dockerPullToolSchema } from "../../src/tools/docker-pull.tool.js";
-import { dockerInspectToolSchema } from "../../src/tools/docker-inspect.tool.js";
-import { dockerVerifyToolSchema } from "../../src/tools/docker-verify.tool.js";
-import { skillInvokeToolSchema } from "../../src/tools/skill-invoke.tool.js";
-import { kbQueryToolSchema } from "../../src/tools/kb-query.tool.js";
-import { fileInspectToolSchema } from "../../src/tools/file-inspect.tool.js";
-import { workflowRunToolSchema } from "../../src/tools/workflow-run.tool.js";
-import { ALL_TOOLS } from "../../src/tools/index.js";
+import { dockerExecToolSchema } from "../../src/tools/docker-exec.tool";
+import { dockerSearchToolSchema } from "../../src/tools/docker-search.tool";
+import { dockerPullToolSchema } from "../../src/tools/docker-pull.tool";
+import { dockerInspectToolSchema } from "../../src/tools/docker-inspect.tool";
+import { dockerVerifyToolSchema } from "../../src/tools/docker-verify.tool";
+import { skillInvokeToolSchema } from "../../src/tools/skill-invoke.tool";
+import { kbQueryToolSchema } from "../../src/tools/kb-query.tool";
+import { fileInspectToolSchema } from "../../src/tools/file-inspect.tool";
+import { workflowRunToolSchema } from "../../src/tools/workflow-run.tool";
+import { ALL_TOOLS } from "../../src/tools/index";
 
 // ---------------------------------------------------------------------------
 // docker-exec (discriminated union)

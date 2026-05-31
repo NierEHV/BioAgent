@@ -2,7 +2,7 @@
 // @bioagent/workflow — scRNA-seq Standard Workflow Definition
 // ============================================================
 
-import type { WorkflowDef } from "../engine.types.js";
+import type { WorkflowDef } from "../engine.types";
 
 /**
  * 10x Genomics scRNA-seq 标准分析流程。

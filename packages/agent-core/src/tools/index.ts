@@ -7,63 +7,63 @@ import {
   dockerExecToolSchema,
   dockerExecHandler,
   type DockerExecToolParams,
-} from "./docker-exec.tool.js";
+} from "./docker-exec.tool";
 
 import {
   dockerSearchToolDef,
   dockerSearchToolSchema,
   dockerSearchHandler,
   type DockerSearchToolParams,
-} from "./docker-search.tool.js";
+} from "./docker-search.tool";
 
 import {
   dockerPullToolDef,
   dockerPullToolSchema,
   dockerPullHandler,
   type DockerPullToolParams,
-} from "./docker-pull.tool.js";
+} from "./docker-pull.tool";
 
 import {
   dockerInspectToolDef,
   dockerInspectToolSchema,
   dockerInspectHandler,
   type DockerInspectToolParams,
-} from "./docker-inspect.tool.js";
+} from "./docker-inspect.tool";
 
 import {
   dockerVerifyToolDef,
   dockerVerifyToolSchema,
   dockerVerifyHandler,
   type DockerVerifyToolParams,
-} from "./docker-verify.tool.js";
+} from "./docker-verify.tool";
 
 import {
   skillInvokeToolDef,
   skillInvokeToolSchema,
   skillInvokeHandler,
   type SkillInvokeToolParams,
-} from "./skill-invoke.tool.js";
+} from "./skill-invoke.tool";
 
 import {
   kbQueryToolDef,
   kbQueryToolSchema,
   kbQueryHandler,
   type KbQueryToolParams,
-} from "./kb-query.tool.js";
+} from "./kb-query.tool";
 
 import {
   fileInspectToolDef,
   fileInspectToolSchema,
   fileInspectHandler,
   type FileInspectToolParams,
-} from "./file-inspect.tool.js";
+} from "./file-inspect.tool";
 
 import {
   workflowRunToolDef,
   workflowRunToolSchema,
   workflowRunHandler,
   type WorkflowRunToolParams,
-} from "./workflow-run.tool.js";
+} from "./workflow-run.tool";
 
 // ---------------------------------------------------------------------------
 // Re-exports

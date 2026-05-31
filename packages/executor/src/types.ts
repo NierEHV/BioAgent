@@ -10,7 +10,7 @@ export type {
   ExecConfig,
   ExecResult,
   ContainerStatus,
-} from "./container-manager.types.js";
+} from "./container-manager.types";
 
 export type {
   PullProgress,
@@ -18,8 +18,8 @@ export type {
   ImageInfo,
   SearchParams,
   SearchResult,
-} from "./image-search.types.js";
+} from "./image-search.types";
 
 export type {
   ResourceReport,
-} from "./resource-probe.types.js";
+} from "./resource-probe.types";

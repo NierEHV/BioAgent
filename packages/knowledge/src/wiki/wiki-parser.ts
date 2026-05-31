@@ -6,7 +6,7 @@ import matter from "gray-matter";
 import { readFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import { join, extname } from "node:path";
 import { z } from "zod";
-import { getLogger } from "../logger.js";
+import { getLogger } from "../logger";
 
 const logger = getLogger("wiki-parser");
 

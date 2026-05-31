@@ -3,7 +3,7 @@
 // ============================================================
 
 import { describe, it, expect, beforeAll } from "vitest";
-import { ImageManager } from "../src/image-manager.js";
+import { ImageManager } from "../src/image-manager";
 
 describe("ImageManager", () => {
   const mgr = new ImageManager();

@@ -2,7 +2,7 @@
 // @bioagent/workflow — WorkflowScheduler
 // ============================================================
 
-import type { WorkflowNode, NodeState } from "./engine.types.js";
+import type { WorkflowNode, NodeState } from "./engine.types";
 
 /**
  * 工作流调度器。

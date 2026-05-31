@@ -9,11 +9,11 @@
 // - trajectory_converged: graph learning succeeded
 // - pseudotime_range: pseudotime spread across cells
 
-import { BaseSkill } from "../base-skill.js";
+import { BaseSkill } from "../base-skill";
 import type {
   SkillSpec, SkillContext, SkillExecResult, QCReport,
   SkillOutput, ValidationResult, ToolChoice, DataContext,
-} from "../base-skill.types.js";
+} from "../base-skill.types";
 import type { ResourceReport } from "@bioagent/executor";
 
 export class TrajectorySkill extends BaseSkill {

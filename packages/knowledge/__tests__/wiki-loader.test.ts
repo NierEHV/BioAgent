@@ -4,9 +4,9 @@
 
 import { describe, it, expect, beforeAll } from "vitest";
 import { join } from "node:path";
-import { WikiLoader } from "../src/wiki/wiki-loader.js";
-import { parseWikiFile, loadAllWikiFiles, searchWiki } from "../src/wiki/wiki-parser.js";
-import type { WikiDocFull } from "../src/wiki/wiki-parser.js";
+import { WikiLoader } from "../src/wiki/wiki-loader";
+import { parseWikiFile, loadAllWikiFiles, searchWiki } from "../src/wiki/wiki-parser";
+import type { WikiDocFull } from "../src/wiki/wiki-parser";
 
 const WIKI_DIR = join(import.meta.dirname ?? __dirname, "..", "data", "wiki");
 

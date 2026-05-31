@@ -9,11 +9,11 @@
 // - report_generated: HTML file exists and is non-empty
 // - sections_complete: all expected sections populated
 
-import { BaseSkill } from "../base-skill.js";
+import { BaseSkill } from "../base-skill";
 import type {
   SkillSpec, SkillContext, SkillExecResult, QCReport,
   SkillOutput, ValidationResult, ToolChoice, DataContext,
-} from "../base-skill.types.js";
+} from "../base-skill.types";
 import type { ResourceReport } from "@bioagent/executor";
 
 export class ReportGeneratorSkill extends BaseSkill {

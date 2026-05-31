@@ -2,7 +2,7 @@
 // @bioagent/skills — SkillRegistry
 // ============================================================
 
-import type { BaseSkill } from "./base-skill.js";
+import type { BaseSkill } from "./base-skill";
 
 /**
  * Skill 验证结果。

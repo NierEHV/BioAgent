@@ -12,7 +12,7 @@ import {
   type GraphPath,
   type KnowledgeConflict,
   type WikiDocument,
-} from "../src/bridge.types.js";
+} from "../src/bridge.types";
 
 // ---------------------------------------------------------------------------
 // Type conformance tests (compile-time + runtime shape checks)

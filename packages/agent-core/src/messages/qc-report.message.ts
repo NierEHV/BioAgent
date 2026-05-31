@@ -2,7 +2,7 @@
 // @bioagent/agent-core — QCReportMessage
 // ============================================================
 
-import type { QCCheck } from "../hooks/qc.hook.js";
+import type { QCCheck } from "../hooks/qc.hook";
 
 /**
  * QC Report message — encapsulates a complete quality control report

@@ -8,8 +8,8 @@ import {
   parseWikiFile,
   searchWiki,
   type WikiDocFull,
-} from "./wiki-parser.js";
-import { getLogger } from "../logger.js";
+} from "./wiki-parser";
+import { getLogger } from "../logger";
 
 const logger = getLogger("wiki-loader");
 

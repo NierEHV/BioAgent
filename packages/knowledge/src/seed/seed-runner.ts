@@ -12,9 +12,9 @@
 // 6. Run verification queries
 // ============================================================
 
-import { ChromaClientWrapper } from "../vector-db/chroma-client.js";
-import { KuzuClient } from "../graph-db/kuzu-client.js";
-import { WikiLoader } from "../wiki/wiki-loader.js";
+import { ChromaClientWrapper } from "../vector-db/chroma-client";
+import { KuzuClient } from "../graph-db/kuzu-client";
+import { WikiLoader } from "../wiki/wiki-loader";
 import {
   SCRNA_SEED_SOURCES,
   SEED_GENES,
@@ -22,9 +22,9 @@ import {
   SEED_PATHWAYS,
   SEED_TOOLS,
   LITERATURE_SNIPPETS,
-} from "./scrna-seed.js";
-import { COLLECTIONS } from "../vector-db/collections.js";
-import { getLogger } from "../logger.js";
+} from "./scrna-seed";
+import { COLLECTIONS } from "../vector-db/collections";
+import { getLogger } from "../logger";
 
 const logger = getLogger("seed-runner");
 

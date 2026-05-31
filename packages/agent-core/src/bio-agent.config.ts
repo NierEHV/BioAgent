@@ -2,7 +2,7 @@
 // @bioagent/agent-core — BioAgent Configuration
 // ============================================================
 
-import type { BioAgentConfig } from "./types.js";
+import type { BioAgentConfig } from "./types";
 
 /** 默认配置 — 可由环境变量覆盖 */
 export const DEFAULT_CONFIG: BioAgentConfig = {

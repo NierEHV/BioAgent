@@ -4,8 +4,8 @@
 
 import kuzu, { type Database, type Connection, type QueryResult } from "kuzu";
 import { readFileSync } from "node:fs";
-import { NODE_TABLES, REL_TABLES, type NodeTableDef, type RelTableDef } from "./schema.js";
-import { getLogger } from "../logger.js";
+import { NODE_TABLES, REL_TABLES, type NodeTableDef, type RelTableDef } from "./schema";
+import { getLogger } from "../logger";
 
 const logger = getLogger("kuzu-client");
 

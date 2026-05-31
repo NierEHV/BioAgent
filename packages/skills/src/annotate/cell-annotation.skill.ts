@@ -8,7 +8,7 @@
 // The system MUST present results to the user for review before proceeding.
 // ============================================================
 
-import { BaseSkill } from "../base-skill.js";
+import { BaseSkill } from "../base-skill";
 import type {
   SkillSpec,
   SkillContext,
@@ -18,7 +18,7 @@ import type {
   ValidationResult,
   ToolChoice,
   DataContext,
-} from "../base-skill.types.js";
+} from "../base-skill.types";
 import type { ResourceReport } from "@bioagent/executor";
 
 /**

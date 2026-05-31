@@ -20,80 +20,80 @@ export type {
   DataContext,
   JSONSchema,
   TroubleshootingIssue,
-} from "./base-skill.types.js";
+} from "./base-skill.types";
 
 // ---------------------------------------------------------------------------
 // BaseSkill
 // ---------------------------------------------------------------------------
-export { BaseSkill } from "./base-skill.js";
+export { BaseSkill } from "./base-skill";
 
 // ---------------------------------------------------------------------------
 // SkillRegistry
 // ---------------------------------------------------------------------------
-export { SkillRegistry } from "./skill-registry.js";
-export type { SkillValidationResult } from "./skill-registry.js";
+export { SkillRegistry } from "./skill-registry";
+export type { SkillValidationResult } from "./skill-registry";
 
 // ---------------------------------------------------------------------------
 // SkillExecutor
 // ---------------------------------------------------------------------------
-export { SkillExecutor } from "./skill-executor.js";
-export type { ResourceCheckResult } from "./skill-executor.js";
+export { SkillExecutor } from "./skill-executor";
+export type { ResourceCheckResult } from "./skill-executor";
 
 // ---------------------------------------------------------------------------
 // P0 Skills — I/O
 // ---------------------------------------------------------------------------
-export { DataImportSkill } from "./io/data-import.skill.js";
+export { DataImportSkill } from "./io/data-import.skill";
 
 // ---------------------------------------------------------------------------
 // P0 Skills — QC
 // ---------------------------------------------------------------------------
-export { ScrnaQCSkill } from "./qc/scrna-qc.skill.js";
-export { DoubletDetectionSkill } from "./qc/doublet-detection.skill.js";
+export { ScrnaQCSkill } from "./qc/scrna-qc.skill";
+export { DoubletDetectionSkill } from "./qc/doublet-detection.skill";
 
 // ---------------------------------------------------------------------------
 // P0 Skills — Preprocess
 // ---------------------------------------------------------------------------
-export { ScrnaNormalizeSkill } from "./preprocess/scrna-normalize.skill.js";
-export { HvgSelectionSkill } from "./preprocess/hvg-selection.skill.js";
-export { ScrnaPCASkill } from "./preprocess/scrna-pca.skill.js";
-export { BatchCorrectionSkill } from "./preprocess/batch-correction.skill.js";
+export { ScrnaNormalizeSkill } from "./preprocess/scrna-normalize.skill";
+export { HvgSelectionSkill } from "./preprocess/hvg-selection.skill";
+export { ScrnaPCASkill } from "./preprocess/scrna-pca.skill";
+export { BatchCorrectionSkill } from "./preprocess/batch-correction.skill";
 
 // ---------------------------------------------------------------------------
 // P0 Skills — Embedding
 // ---------------------------------------------------------------------------
-export { UmapTsneSkill } from "./embed/umap-tsne.skill.js";
+export { UmapTsneSkill } from "./embed/umap-tsne.skill";
 
 // ---------------------------------------------------------------------------
 // P0 Skills — Clustering
 // ---------------------------------------------------------------------------
-export { ClusteringSkill } from "./cluster/clustering.skill.js";
+export { ClusteringSkill } from "./cluster/clustering.skill";
 
 // ---------------------------------------------------------------------------
 // P0 Skills — Annotation
 // ---------------------------------------------------------------------------
-export { CellAnnotationSkill } from "./annotate/cell-annotation.skill.js";
+export { CellAnnotationSkill } from "./annotate/cell-annotation.skill";
 
 // ---------------------------------------------------------------------------
 // P0 Skills — Analysis
 // ---------------------------------------------------------------------------
-export { MarkerDetectionSkill } from "./analysis/marker-detection.skill.js";
-export { DiffExpressionSkill } from "./analysis/diff-expression.skill.js";
-export { FunctionalEnrichmentSkill } from "./analysis/functional-enrichment.skill.js";
-export { TrajectorySkill } from "./analysis/trajectory.skill.js";
-export { CellCommunicationSkill } from "./analysis/cell-communication.skill.js";
+export { MarkerDetectionSkill } from "./analysis/marker-detection.skill";
+export { DiffExpressionSkill } from "./analysis/diff-expression.skill";
+export { FunctionalEnrichmentSkill } from "./analysis/functional-enrichment.skill";
+export { TrajectorySkill } from "./analysis/trajectory.skill";
+export { CellCommunicationSkill } from "./analysis/cell-communication.skill";
 
 // ---------------------------------------------------------------------------
 // P0 Skills — Network
 // ---------------------------------------------------------------------------
-export { GRNSkill } from "./network/grn.skill.js";
+export { GRNSkill } from "./network/grn.skill";
 
 // ---------------------------------------------------------------------------
 // P0 Skills — Report
 // ---------------------------------------------------------------------------
-export { ReportGeneratorSkill } from "./report/report-generator.skill.js";
+export { ReportGeneratorSkill } from "./report/report-generator.skill";
 
 // ---------------------------------------------------------------------------
 // Skill Loader
 // ---------------------------------------------------------------------------
-export { SkillLoader } from "./skill-loader.js";
-export type { SkillLoaderOptions } from "./skill-loader.js";
+export { SkillLoader } from "./skill-loader";
+export type { SkillLoaderOptions } from "./skill-loader";

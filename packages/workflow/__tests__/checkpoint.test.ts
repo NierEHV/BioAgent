@@ -7,8 +7,8 @@ import { randomUUID } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
-import { CheckpointManager } from "../src/checkpoint.js";
-import type { CheckpointData, NodeState } from "../src/engine.types.js";
+import { CheckpointManager } from "../src/checkpoint";
+import type { CheckpointData, NodeState } from "../src/engine.types";
 
 function createTestCheckpoint(overrides: Partial<CheckpointData> = {}): CheckpointData {
   const runId = overrides.runId ?? randomUUID();

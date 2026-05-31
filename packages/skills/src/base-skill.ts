@@ -14,7 +14,7 @@ import type {
   ValidationResult,
   ToolChoice,
   DataContext,
-} from "./base-skill.types.js";
+} from "./base-skill.types";
 import type { ResourceReport, ExecResult } from "@bioagent/executor";
 
 // ---------------------------------------------------------------------------

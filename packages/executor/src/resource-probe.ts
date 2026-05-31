@@ -5,7 +5,7 @@
 import { execSync } from "node:child_process";
 import * as os from "node:os";
 import Docker from "dockerode";
-import type { ResourceReport } from "./types.js";
+import type { ResourceReport } from "./types";
 
 // ---------------------------------------------------------------------------
 // ResourceProbe

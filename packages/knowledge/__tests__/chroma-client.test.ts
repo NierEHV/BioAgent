@@ -3,7 +3,7 @@
 // ============================================================
 
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { COLLECTIONS } from "../src/vector-db/collections.js";
+import { COLLECTIONS } from "../src/vector-db/collections";
 
 // ---------------------------------------------------------------------------
 // Mock chromadb module
@@ -44,8 +44,8 @@ vi.mock("chromadb", () => {
   };
 });
 
-import { ChromaClientWrapper } from "../src/vector-db/chroma-client.js";
-import type { SimpleEmbeddingFunction } from "../src/vector-db/chroma-client.js";
+import { ChromaClientWrapper } from "../src/vector-db/chroma-client";
+import type { SimpleEmbeddingFunction } from "../src/vector-db/chroma-client";
 
 // ---------------------------------------------------------------------------
 // Tests

@@ -2,9 +2,9 @@
 // @bioagent/knowledge — Knowledge Bridge (Three-Layer Unified Query)
 // ============================================================
 
-import { ChromaClientWrapper } from "./vector-db/chroma-client.js";
-import { KuzuClient } from "./graph-db/kuzu-client.js";
-import { WikiLoader } from "./wiki/wiki-loader.js";
+import { ChromaClientWrapper } from "./vector-db/chroma-client";
+import { KuzuClient } from "./graph-db/kuzu-client";
+import { WikiLoader } from "./wiki/wiki-loader";
 import {
   type KnowledgeBridgeConfig,
   type KnowledgeQuery,
@@ -15,9 +15,9 @@ import {
   type GraphPath,
   type KnowledgeConflict,
   type WikiDocument,
-} from "./bridge.types.js";
-import { COLLECTIONS } from "./vector-db/collections.js";
-import { getLogger } from "./logger.js";
+} from "./bridge.types";
+import { COLLECTIONS } from "./vector-db/collections";
+import { getLogger } from "./logger";
 
 const logger = getLogger("bridge");
 

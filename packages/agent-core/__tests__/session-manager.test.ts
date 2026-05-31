@@ -5,7 +5,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { existsSync, mkdirSync, rmSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { SessionManager, type SessionMessage } from "../src/session/session-manager.js";
+import { SessionManager, type SessionMessage } from "../src/session/session-manager";
 
 const TEST_SESSIONS_DIR = join(process.cwd(), "__tests__", "__tmp_sessions__");
 

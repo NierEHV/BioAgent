@@ -3,7 +3,7 @@
 // ============================================================
 
 import { describe, it, expect } from "vitest";
-import { parseMemoryLimit, formatBytes, calculateCPUPercent } from "../src/container-manager.js";
+import { parseMemoryLimit, formatBytes, calculateCPUPercent } from "../src/container-manager";
 
 describe("parseMemoryLimit", () => {
   it('parses "64g" as 64 GB in bytes', () => {

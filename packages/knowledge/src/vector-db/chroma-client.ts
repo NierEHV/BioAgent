@@ -3,8 +3,8 @@
 // ============================================================
 
 import { ChromaClient, type Collection } from "chromadb";
-import { COLLECTIONS, type CollectionName } from "./collections.js";
-import { getLogger } from "../logger.js";
+import { COLLECTIONS, type CollectionName } from "./collections";
+import { getLogger } from "../logger";
 
 const logger = getLogger("chroma-client");
 

@@ -6,8 +6,8 @@
 // dynamically from filesystem). The SkillLoader provides a
 // registry integration point and bulk-registration API.
 
-import type { BaseSkill } from "./base-skill.js";
-import { SkillRegistry } from "./skill-registry.js";
+import type { BaseSkill } from "./base-skill";
+import { SkillRegistry } from "./skill-registry";
 
 export interface SkillLoaderOptions {
   /** Registry to populate */

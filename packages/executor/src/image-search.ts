@@ -2,7 +2,7 @@
 // @bioagent/executor — ImageSearchService
 // ============================================================
 
-import type { SearchParams, SearchResult } from "./types.js";
+import type { SearchParams, SearchResult } from "./types";
 
 // ---------------------------------------------------------------------------
 // Helpers

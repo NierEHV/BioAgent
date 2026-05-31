@@ -2,7 +2,7 @@
 // @bioagent/workflow — WorkflowRegistry
 // ============================================================
 
-import type { WorkflowDef } from "./engine.types.js";
+import type { WorkflowDef } from "./engine.types";
 
 /**
  * 工作流注册中心。

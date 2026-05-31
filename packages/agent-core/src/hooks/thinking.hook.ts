@@ -3,8 +3,8 @@
 // ============================================================
 // Injects the 7-step structured thinking template into the agent's system prompt.
 
-import { ThinkingEngine } from "../thinking-engine.js";
-import type { ThinkingContext } from "../thinking-engine.js";
+import { ThinkingEngine } from "../thinking-engine";
+import type { ThinkingContext } from "../thinking-engine";
 
 // ---------------------------------------------------------------------------
 // Thinking Hook

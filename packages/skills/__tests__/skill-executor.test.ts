@@ -3,9 +3,9 @@
 // ============================================================
 
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { BaseSkill } from "../src/base-skill.js";
-import { SkillRegistry } from "../src/skill-registry.js";
-import { SkillExecutor } from "../src/skill-executor.js";
+import { BaseSkill } from "../src/base-skill";
+import { SkillRegistry } from "../src/skill-registry";
+import { SkillExecutor } from "../src/skill-executor";
 import type {
   SkillSpec,
   SkillContext,
@@ -16,7 +16,7 @@ import type {
   ToolChoice,
   DataContext,
   SkillResult,
-} from "../src/base-skill.types.js";
+} from "../src/base-skill.types";
 import type { ResourceReport, ContainerManager } from "@bioagent/executor";
 
 // ---------------------------------------------------------------------------

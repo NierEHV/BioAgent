@@ -6,8 +6,8 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { mkdtempSync, rmSync } from "node:fs";
-import { KuzuClient } from "../src/graph-db/kuzu-client.js";
-import { NODE_TABLES, REL_TABLES } from "../src/graph-db/schema.js";
+import { KuzuClient } from "../src/graph-db/kuzu-client";
+import { NODE_TABLES, REL_TABLES } from "../src/graph-db/schema";
 
 let tmpDir: string;
 let client: KuzuClient;

@@ -3,8 +3,8 @@
 // ============================================================
 
 import type { ContainerManager, ResourceReport } from "@bioagent/executor";
-import type { SkillRegistry } from "./skill-registry.js";
-import type { SkillContext, SkillResult, SkillSpec } from "./base-skill.types.js";
+import type { SkillRegistry } from "./skill-registry";
+import type { SkillContext, SkillResult, SkillSpec } from "./base-skill.types";
 
 /**
  * 资源检查结果。

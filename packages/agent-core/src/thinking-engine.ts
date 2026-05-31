@@ -2,8 +2,8 @@
 // @bioagent/agent-core — Thinking Engine
 // ============================================================
 
-import { THINKING_TEMPLATE, renderTemplate } from "./thinking-template.js";
-import type { ThinkingSection } from "./types.js";
+import { THINKING_TEMPLATE, renderTemplate } from "./thinking-template";
+import type { ThinkingSection } from "./types";
 
 /** 思考引擎构建上下文 */
 export interface ThinkingContext {

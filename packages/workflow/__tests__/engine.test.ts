@@ -7,19 +7,19 @@ import { randomUUID } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
-import { WorkflowEngine } from "../src/engine.js";
-import { WorkflowRegistry } from "../src/registry.js";
-import { CheckpointManager } from "../src/checkpoint.js";
-import { WorkflowScheduler } from "../src/scheduler.js";
-import { evaluateCondition } from "../src/condition.js";
-import { applyErrorPolicy } from "../src/error-policy.js";
+import { WorkflowEngine } from "../src/engine";
+import { WorkflowRegistry } from "../src/registry";
+import { CheckpointManager } from "../src/checkpoint";
+import { WorkflowScheduler } from "../src/scheduler";
+import { evaluateCondition } from "../src/condition";
+import { applyErrorPolicy } from "../src/error-policy";
 import type {
   WorkflowDef,
   WorkflowNode,
   WorkflowState,
   NodeState,
   ErrorPolicy,
-} from "../src/engine.types.js";
+} from "../src/engine.types";
 import type { SkillResult, SkillContext } from "@bioagent/skills";
 
 // ---------------------------------------------------------------------------

@@ -5,7 +5,7 @@
 import { describe, it, expect } from "vitest";
 import {
   validateBeforeToolCall,
-} from "../../src/hooks/validation.hook.js";
+} from "../../src/hooks/validation.hook";
 
 describe("validateBeforeToolCall", () => {
   // ---- Dangerous command detection ----

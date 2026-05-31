@@ -2,12 +2,12 @@
 // @bioagent/executor — DockerExecutor (unified entry point)
 // ============================================================
 
-import { ContainerManager } from "./container-manager.js";
-import { ImageManager } from "./image-manager.js";
-import { ImageSearchService } from "./image-search.js";
-import { VolumeManager } from "./volume-manager.js";
-import { ResourceProbe } from "./resource-probe.js";
-import type { ResourceReport, VolumeMount } from "./types.js";
+import { ContainerManager } from "./container-manager";
+import { ImageManager } from "./image-manager";
+import { ImageSearchService } from "./image-search";
+import { VolumeManager } from "./volume-manager";
+import { ResourceProbe } from "./resource-probe";
+import type { ResourceReport, VolumeMount } from "./types";
 
 // ---------------------------------------------------------------------------
 // DockerExecutor

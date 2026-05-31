@@ -13,7 +13,7 @@ import {
   PullProgress,
   PullResult,
   VolumeMount,
-} from "./types.js";
+} from "./types";
 
 // ---------------------------------------------------------------------------
 // Helper utilities

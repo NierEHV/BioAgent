@@ -9,11 +9,11 @@
 // - regulons_found: at least 5 regulons identified
 // - auc_scores: AUCell scoring completed
 
-import { BaseSkill } from "../base-skill.js";
+import { BaseSkill } from "../base-skill";
 import type {
   SkillSpec, SkillContext, SkillExecResult, QCReport,
   SkillOutput, ValidationResult, ToolChoice, DataContext,
-} from "../base-skill.types.js";
+} from "../base-skill.types";
 import type { ResourceReport } from "@bioagent/executor";
 
 export class GRNSkill extends BaseSkill {
