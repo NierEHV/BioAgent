@@ -103,9 +103,12 @@ export class ContainerManager {
   readonly docker: Docker;
 
   constructor(dockerConfig?: DockerClientConfig) {
+    const defaultSocket = process.platform === "win32"
+      ? "//./pipe/dockerDesktopLinuxEngine"
+      : "/var/run/docker.sock";
     this.docker = new Docker({
       host: dockerConfig?.host,
-      socketPath: dockerConfig?.socketPath,
+      socketPath: dockerConfig?.socketPath || defaultSocket,
     });
   }
 
