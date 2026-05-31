@@ -336,6 +336,7 @@ export class ScrnaQCSkill extends BaseSkill {
     const pythonScript = `
 import scanpy as sc
 import numpy as np
+import pandas as pd
 import json
 import os
 from scipy import stats
@@ -476,8 +477,7 @@ output_file = os.path.join(output_path, "qc_filtered.h5ad")
 adata.write(output_file)
 print(f"Written: {output_file}")
 
-# Print final JSON (add pandas import above was needed)
-import pandas as pd
+# Print final JSON
 print(json.dumps(qc_report))
 `.trim();
 
