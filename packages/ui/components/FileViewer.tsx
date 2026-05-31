@@ -8,6 +8,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useTheme } from "@/hooks/useTheme";
 import { encodeFilePathForApi, getFileName, getRelativeFilePath } from "@/lib/file-paths";
+import { useLanguage } from "@/hooks/useLanguage";
 
 interface Props {
   filePath: string;
@@ -116,6 +117,7 @@ function diffLines(oldLines: string[], newLines: string[]): DiffLine[] {
 }
 
 function DiffView({ oldContent, newContent }: { oldContent: string; newContent: string; language: string }) {
+  const { t } = useLanguage();
   const oldLines = oldContent.split("\n");
   const newLines = newContent.split("\n");
   const diff = diffLines(oldLines, newLines);
@@ -124,7 +126,7 @@ function DiffView({ oldContent, newContent }: { oldContent: string; newContent: 
   if (!hasChanges) {
     return (
       <div style={{ padding: "12px 16px", fontSize: 12, color: "var(--text-dim)", fontFamily: "var(--font-mono)" }}>
-        No changes
+        {t("noChanges")}
       </div>
     );
   }
@@ -188,7 +190,7 @@ function DiffView({ oldContent, newContent }: { oldContent: string; newContent: 
                 borderBottom: "1px solid var(--border)",
               }}
             >
-              ... {seg.count} unchanged lines ...
+              ... {seg.count} {t("unchangedLines")} ...
             </div>
           );
           diffIdx += seg.count;
@@ -271,6 +273,7 @@ function DiffView({ oldContent, newContent }: { oldContent: string; newContent: 
 }
 
 function ImageViewer({ filePath, cwd }: { filePath: string; cwd?: string }) {
+  const { t } = useLanguage();
   const [watching, setWatching] = useState(false);
   const [bust, setBust] = useState(0);
   const [size, setSize] = useState<number | null>(null);
@@ -340,7 +343,7 @@ function ImageViewer({ filePath, cwd }: { filePath: string; cwd?: string }) {
         {naturalSize && <span>{naturalSize.w} × {naturalSize.h}</span>}
         {formatSizeStr && <span>{formatSizeStr}</span>}
         <span
-          title={watching ? "Live sync active" : "Not watching"}
+          title={watching ? t("liveSyncTitle") : t("notWatching")}
           style={{ display: "flex", alignItems: "center", gap: 4, color: watching ? "#4ade80" : "var(--text-dim)" }}
         >
           <span
@@ -353,7 +356,7 @@ function ImageViewer({ filePath, cwd }: { filePath: string; cwd?: string }) {
               boxShadow: watching ? "0 0 4px #4ade80" : "none",
             }}
           />
-          {watching ? "live" : "static"}
+          {watching ? t("liveSync") : t("staticFile")}
         </span>
       </div>
       <div
@@ -405,6 +408,7 @@ function formatDuration(seconds: number): string {
 }
 
 function AudioViewer({ filePath, cwd }: { filePath: string; cwd?: string }) {
+  const { t } = useLanguage();
   const [watching, setWatching] = useState(false);
   const [bust, setBust] = useState(0);
   const [size, setSize] = useState<number | null>(null);
@@ -474,7 +478,7 @@ function AudioViewer({ filePath, cwd }: { filePath: string; cwd?: string }) {
         {duration != null && <span>{formatDuration(duration)}</span>}
         {size != null && <span>{formatSize(size)}</span>}
         <span
-          title={watching ? "Live sync active" : "Not watching"}
+          title={watching ? t("liveSyncTitle") : t("notWatching")}
           style={{ display: "flex", alignItems: "center", gap: 4, color: watching ? "#4ade80" : "var(--text-dim)" }}
         >
           <span
@@ -487,7 +491,7 @@ function AudioViewer({ filePath, cwd }: { filePath: string; cwd?: string }) {
               boxShadow: watching ? "0 0 4px #4ade80" : "none",
             }}
           />
-          {watching ? "live" : "static"}
+          {watching ? t("liveSync") : t("staticFile")}
         </span>
       </div>
       <div
@@ -533,6 +537,7 @@ export function FileViewer({ filePath, cwd }: Props) {
 
 function TextFileViewer({ filePath, cwd }: Props) {
   const { isDark } = useTheme();
+  const { t } = useLanguage();
   const [data, setData] = useState<FileData | null>(null);
   const [prevContent, setPrevContent] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -621,7 +626,7 @@ function TextFileViewer({ filePath, cwd }: Props) {
   if (loading) {
     return (
       <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)", fontSize: 13 }}>
-        Loading...
+        {t("loading")}
       </div>
     );
   }
@@ -661,12 +666,12 @@ function TextFileViewer({ filePath, cwd }: Props) {
           {getRelativeFilePath(filePath, cwd)}
         </span>
         <span style={{ marginLeft: "auto" }}>{data.language}</span>
-        {viewMode === "source" && <span>{lines.length} lines</span>}
+        {viewMode === "source" && <span>{lines.length} {t("lines")}</span>}
         <span>{formatSize(data.size)}</span>
 
         {/* Live watch indicator */}
         <span
-          title={watching ? "Live sync active" : "Not watching"}
+          title={watching ? t("liveSyncTitle") : t("notWatching")}
           style={{ display: "flex", alignItems: "center", gap: 4, color: watching ? "#4ade80" : "var(--text-dim)" }}
         >
           <span
@@ -679,7 +684,7 @@ function TextFileViewer({ filePath, cwd }: Props) {
               boxShadow: watching ? "0 0 4px #4ade80" : "none",
             }}
           />
-          {watching ? "live" : "static"}
+          {watching ? t("liveSync") : t("staticFile")}
         </span>
 
         {/* Diff / Source toggle — shown only when there are changes */}
@@ -694,7 +699,7 @@ function TextFileViewer({ filePath, cwd }: Props) {
                 fontWeight: viewMode === "source" ? 600 : 400,
               }}
             >
-              Source
+              {t("source")}
             </button>
             <button
               onClick={() => setViewMode("diff")}
@@ -705,7 +710,7 @@ function TextFileViewer({ filePath, cwd }: Props) {
                 fontWeight: viewMode === "diff" ? 600 : 400,
               }}
             >
-              Diff {changeCount > 0 && <span style={{ color: "#4ade80", marginLeft: 2 }}>+{changeCount}</span>}
+              {t("diff")} {changeCount > 0 && <span style={{ color: "#4ade80", marginLeft: 2 }}>+{changeCount}</span>}
             </button>
           </div>
         )}
@@ -723,7 +728,7 @@ function TextFileViewer({ filePath, cwd }: Props) {
               fontWeight: wrapLines ? 600 : 400,
             }}
           >
-            wrap
+            {t("wrap")}
           </button>
         )}
 
@@ -739,7 +744,7 @@ function TextFileViewer({ filePath, cwd }: Props) {
                 fontWeight: !previewMode ? 600 : 400,
               }}
             >
-              Code
+              {t("code")}
             </button>
             <button
               onClick={() => setPreviewMode(true)}
@@ -750,7 +755,7 @@ function TextFileViewer({ filePath, cwd }: Props) {
                 fontWeight: previewMode ? 600 : 400,
               }}
             >
-              Preview
+              {t("preview")}
             </button>
           </div>
         )}
@@ -767,7 +772,7 @@ function TextFileViewer({ filePath, cwd }: Props) {
                 fontWeight: previewMode ? 600 : 400,
               }}
             >
-              Preview
+              {t("preview")}
             </button>
             <button
               onClick={() => setPreviewMode(false)}
@@ -778,7 +783,7 @@ function TextFileViewer({ filePath, cwd }: Props) {
                 fontWeight: !previewMode ? 600 : 400,
               }}
             >
-              Raw
+              {t("raw")}
             </button>
           </div>
         )}

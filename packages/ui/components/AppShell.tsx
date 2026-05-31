@@ -440,7 +440,7 @@ export function AppShell() {
       <div style={{ padding: "8px", flexShrink: 0, display: "flex", justifyContent: "space-between", gap: 4 }}>
         {([
           {
-            label: "Models",
+            label: tl("modelsTab"),
             onClick: () => setModelsConfigOpen(true),
             disabled: false,
             icon: (
@@ -454,7 +454,7 @@ export function AppShell() {
             ),
           },
           {
-            label: "Skills",
+            label: tl("skillsConfigTitle"),
             onClick: () => setSkillsConfigOpen(true),
             disabled: !activeCwd && !selectedSession?.cwd && !newSessionCwd,
             icon: (
@@ -528,7 +528,7 @@ export function AppShell() {
         <div ref={topBarRef} style={{ display: "flex", alignItems: "center", flexShrink: 0, borderBottom: "1px solid var(--border)", height: 36, background: "var(--bg-panel)" }}>
           <button
             onClick={() => setSidebarOpen((v) => !v)}
-            title={sidebarOpen ? "Hide sidebar" : "Show sidebar"}
+            title={sidebarOpen ? tl("collapseSidebar") : tl("expandSidebar")}
             style={{
               display: "flex", alignItems: "center", justifyContent: "center",
               width: 36, height: 36, padding: 0,
@@ -554,8 +554,8 @@ export function AppShell() {
               const rect = e.currentTarget.getBoundingClientRect();
               toggleTheme({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
             }}
-            title={isDark ? "Switch to light mode" : "Switch to dark mode"}
-            aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+            title={isDark ? tl("lightTheme") : tl("darkTheme")}
+            aria-label={isDark ? tl("lightTheme") : tl("darkTheme")}
             aria-pressed={isDark}
             style={{
               display: "flex", alignItems: "center", justifyContent: "center",
@@ -615,7 +615,7 @@ export function AppShell() {
                   <line x1="8" y1="13" x2="16" y2="13" />
                   <line x1="8" y1="17" x2="13" y2="17" />
                 </svg>
-                <span>System</span>
+                <span>{tl("systemPrompt")}</span>
               </button>
             </div>
           )}
@@ -732,11 +732,11 @@ export function AppShell() {
                     </div>
                   ) : systemPrompt === "" ? (
                     <div style={{ padding: "10px 16px", fontSize: 12, color: "var(--text-muted)", fontStyle: "italic" }}>
-                      System prompt is empty (tools are disabled)
+                      {tl("systemPromptEmpty")}
                     </div>
                   ) : (
                     <div style={{ padding: "10px 16px", fontSize: 12, color: "var(--text-muted)", fontStyle: "italic" }}>
-                      Send a message to load the system prompt
+                      {tl("loadSystemPrompt")}
                     </div>
                   )}
                 </div>
@@ -766,7 +766,7 @@ export function AppShell() {
           ) : showPlaceholder ? (
             activeCwd ? (
               <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)", fontSize: 15 }}>
-                Select a session from the sidebar
+                {tl("selectSession")}
               </div>
             ) : (
               <div style={{ position: "absolute", top: 12, left: 12, display: "flex", alignItems: "flex-start", gap: 8, userSelect: "none", pointerEvents: "none" }}>
@@ -774,10 +774,10 @@ export function AppShell() {
                   <line x1="20" y1="12" x2="4" y2="12" /><polyline points="10 6 4 12 10 18" />
                 </svg>
                 <div>
-                  <div style={{ fontSize: 18, fontWeight: 600, color: "var(--text)", marginBottom: 8 }}>Get Started</div>
+                  <div style={{ fontSize: 18, fontWeight: 600, color: "var(--text)", marginBottom: 8 }}>{tl("gettingStarted")}</div>
                   <div style={{ fontSize: 12, color: "var(--text-muted)", lineHeight: 1.8 }}>
-                    <span style={{ color: "var(--text-dim)", marginRight: 6 }}>1.</span>Select a project directory from the sidebar<br />
-                    <span style={{ color: "var(--text-dim)", marginRight: 6 }}>2.</span>Add models via the <strong style={{ color: "var(--text)" }}>Models</strong> button at the bottom
+                    <span style={{ color: "var(--text-dim)", marginRight: 6 }}>1.</span>{tl("gettingStartedStep1")}<br />
+                    <span style={{ color: "var(--text-dim)", marginRight: 6 }}>2.</span>{tl("gettingStartedStep2")}
                   </div>
                 </div>
               </div>
@@ -833,7 +833,7 @@ export function AppShell() {
           </div>
           <button
             onClick={() => setBioPanelOpen(false)}
-            title="Close bio panel"
+            title={tl("closeBioPanel")}
             style={{
               display: "flex", alignItems: "center", justifyContent: "center",
               width: 28, height: 28, padding: 0, marginRight: 4,
@@ -860,7 +860,7 @@ export function AppShell() {
               <>
                 {!showChat && (
                   <div style={{ textAlign: "center", color: "var(--text-muted)", fontSize: 12, padding: "40px 0" }}>
-                    Start a session to track workflow progress
+                    {tl("startSessionWorkflow")}
                   </div>
                 )}
                 {showChat && workflowRunId ? (
@@ -875,7 +875,7 @@ export function AppShell() {
                   />
                 ) : showChat ? (
                   <div style={{ textAlign: "center", color: "var(--text-muted)", fontSize: 12, padding: "40px 0" }}>
-                    Send a message to start a workflow
+                    {tl("sendMsgWorkflow")}
                   </div>
                 ) : null}
               </>
@@ -884,7 +884,7 @@ export function AppShell() {
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {qcReports.length === 0 ? (
                   <div style={{ textAlign: "center", color: "var(--text-muted)", fontSize: 12, padding: "40px 0" }}>
-                    QC reports will appear here after workflow execution
+                    {tl("qcReportsAppear")}
                   </div>
                 ) : (
                   qcReports.map((report, idx) => (
@@ -963,7 +963,7 @@ export function AppShell() {
             <FileViewer filePath={activeFileTab.filePath} cwd={activeCwd ?? undefined} />
           ) : (
             <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-dim)", fontSize: 12 }}>
-              No file open
+              {tl("noFileOpen")}
             </div>
           )}
         </div>
@@ -972,7 +972,7 @@ export function AppShell() {
     {/* Bio panel toggle — positioned to the left of file panel toggle */}
     <button
       onClick={() => setBioPanelOpen((v) => !v)}
-      title={bioPanelOpen ? "Hide bioinformatics panel" : "Show bioinformatics panel"}
+      title={bioPanelOpen ? tl("hideBioPanel") : tl("showBioPanel")}
       style={{
         position: "fixed", top: 0, right: 36, zIndex: 300,
         display: "flex", alignItems: "center", justifyContent: "center",
@@ -991,7 +991,7 @@ export function AppShell() {
     {/* File panel toggle — always visible at top-right */}
     <button
       onClick={() => setRightPanelOpen((v) => !v)}
-      title={rightPanelOpen ? "Hide file panel" : "Show file panel"}
+      title={rightPanelOpen ? tl("hideFilePanel") : tl("showFilePanel")}
       style={{
         position: "fixed", top: 0, right: 0, zIndex: 300,
         display: "flex", alignItems: "center", justifyContent: "center",

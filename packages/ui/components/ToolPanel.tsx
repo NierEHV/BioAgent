@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { useLanguage } from "@/hooks/useLanguage";
 
 export interface ToolEntry {
   name: string;
@@ -27,14 +28,16 @@ interface Props {
   onClose: () => void;
 }
 
-const PRESETS: { id: ToolPreset; label: string; desc: string; tools: string[] }[] = [
-  { id: "none",    label: "Off",  desc: "No tools",                                tools: PRESET_NONE },
-  { id: "default", label: "Low",  desc: "read · bash · edit · write",              tools: PRESET_DEFAULT },
-  { id: "full",    label: "High", desc: "read · bash · edit · write · grep · find · ls", tools: PRESET_FULL },
-];
-
 export function ToolPanel({ tools, onPreset, onClose }: Props) {
+  const { t } = useLanguage();
   const panelRef = useRef<HTMLDivElement>(null);
+
+  const PRESETS: { id: ToolPreset; label: string; desc: string; tools: string[] }[] = [
+    { id: "none",    label: t("toolPresetOff"),  desc: t("noToolsEnabled"),                                tools: PRESET_NONE },
+    { id: "default", label: t("toolPresetLow"),  desc: t("defaultTools"),              tools: PRESET_DEFAULT },
+    { id: "full",    label: t("toolPresetHigh"), desc: t("fullTools"), tools: PRESET_FULL },
+  ];
+
   const current = getPresetFromTools(tools);
 
   useEffect(() => {
@@ -104,8 +107,8 @@ export function ToolPanel({ tools, onPreset, onClose }: Props) {
 
       {/* Description of current selection */}
       <div style={{ fontSize: 11, color: "var(--text-dim)", lineHeight: 1.5 }}>
-        {currentIndex >= 0 ? PRESETS[currentIndex].desc || "No tools enabled" : ""}
-        {current === "none" && <span> — agent will not use any tools</span>}
+        {currentIndex >= 0 ? PRESETS[currentIndex].desc || t("noToolsEnabled") : ""}
+        {current === "none" && <span> — {t("toolsOffDesc")}</span>}
       </div>
 
       {/* Track bar */}
@@ -123,7 +126,7 @@ export function ToolPanel({ tools, onPreset, onClose }: Props) {
       </div>
 
       <div style={{ fontSize: 10, color: "var(--text-dim)" }}>
-        takes effect on next turn
+        {t("toolsNextTurn")}
       </div>
     </div>
   );

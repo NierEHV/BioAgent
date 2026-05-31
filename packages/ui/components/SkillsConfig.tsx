@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { SkillSearchResult } from "@/app/api/skills/search/route";
+import { useLanguage } from "@/hooks/useLanguage";
 
 interface Skill {
   name: string;
@@ -90,6 +91,7 @@ function SkillDetail({
   toggling: boolean;
   saveError: string | null;
 }) {
+  const { t } = useLanguage();
   const label = sourceLabel(skill);
   const enabled = !skill.disableModelInvocation;
 
@@ -150,7 +152,7 @@ function SkillDetail({
         <span
           style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 500 }}
         >
-          Name
+          {t("name")}
         </span>
         <span
           style={{
@@ -167,7 +169,7 @@ function SkillDetail({
         <span
           style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 500 }}
         >
-          Description
+          {t("description")}
         </span>
         <span
           style={{ fontSize: 14, color: "var(--text-muted)", lineHeight: 1.6 }}
@@ -186,6 +188,7 @@ function AddSkillPanel({
   cwd: string;
   onInstalled: () => void;
 }) {
+  const { t } = useLanguage();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SkillSearchResult[]>([]);
   const [searching, setSearching] = useState(false);
@@ -220,7 +223,7 @@ function AddSkillPanel({
         return;
       }
       setResults(d.results ?? []);
-      if ((d.results ?? []).length === 0) setSearchError("No skills found");
+      if ((d.results ?? []).length === 0) setSearchError(t("noSkillsFound"));
     } catch (e) {
       setSearchError(String(e));
     } finally {
@@ -271,7 +274,7 @@ function AddSkillPanel({
         }}
       >
         <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text)" }}>
-          Add Skill
+          {t("addSkill")}
         </div>
 
         {/* Search row */}
@@ -310,7 +313,7 @@ function AddSkillPanel({
               flexShrink: 0,
             }}
           >
-            {searching ? "Searching…" : "Search"}
+            {searching ? t("searching") : t("search")}
           </button>
         </div>
 
@@ -474,10 +477,10 @@ function AddSkillPanel({
                   }}
                 >
                   {isInstalled
-                    ? "✓ Installed"
+                    ? "✓ " + t("installed")
                     : isInstalling
-                      ? "Installing…"
-                      : "Install"}
+                      ? t("installing")
+                      : t("install")}
                 </button>
               </div>
             );
@@ -489,7 +492,7 @@ function AddSkillPanel({
           <div
             style={{ fontSize: 13, color: "var(--text-dim)", lineHeight: 1.8 }}
           >
-            Search{" "}
+            {t("search")}{" "}
             <a
               href="https://skills.sh"
               target="_blank"
@@ -513,6 +516,7 @@ export function SkillsConfig({
   cwd: string;
   onClose: () => void;
 }) {
+  const { t } = useLanguage();
   const [skills, setSkills] = useState<Skill[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -624,7 +628,7 @@ export function SkillsConfig({
             <span
               style={{ fontSize: 15, fontWeight: 700, color: "var(--text)" }}
             >
-              Skills
+              {t("skillsConfigTitle")}
             </span>
             <code
               style={{
@@ -678,7 +682,7 @@ export function SkillsConfig({
                     color: "var(--text-muted)",
                   }}
                 >
-                  Loading…
+                  {t("loading")}
                 </div>
               ) : error ? (
                 <div
@@ -698,7 +702,7 @@ export function SkillsConfig({
                     color: "var(--text-dim)",
                   }}
                 >
-                  No skills found
+                  {t("noSkillsFound")}
                 </div>
               ) : (
                 (() => {
@@ -840,7 +844,7 @@ export function SkillsConfig({
                   <line x1="12" y1="5" x2="12" y2="19" />
                   <line x1="5" y1="12" x2="19" y2="12" />
                 </svg>
-                Add skill
+                {t("addSkill")}
               </div>
             </div>
           </div>
@@ -874,7 +878,7 @@ export function SkillsConfig({
                   fontSize: 13,
                 }}
               >
-                Select a skill
+                {t("selectSkill")}
               </div>
             )}
           </div>
@@ -903,7 +907,7 @@ export function SkillsConfig({
               fontSize: 13,
             }}
           >
-            Close
+            {t("close")}
           </button>
         </div>
       </div>

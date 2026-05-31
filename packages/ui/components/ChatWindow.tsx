@@ -8,6 +8,7 @@ import { ChatMinimap, useMessageRefs } from "./ChatMinimap";
 import { useAgentSession, type AgentPhase } from "@/hooks/useAgentSession";
 import { useAudio } from "@/hooks/useAudio";
 import { useDragDrop } from "@/hooks/useDragDrop";
+import { useLanguage } from "@/hooks/useLanguage";
 
 interface Props {
   session: SessionInfo | null;
@@ -23,16 +24,16 @@ interface Props {
   onContextUsageChange?: (usage: { percent: number | null; contextWindow: number; tokens: number | null } | null) => void;
 }
 
-function phaseLabel(phase: AgentPhase): string {
+function phaseLabel(phase: AgentPhase, t: (key: import("@/lib/i18n").TranslationKey) => string): string {
   if (phase?.kind === "running_tools") {
     const names = phase.tools.map((t) => t.name);
-    if (names.length === 0) return "Running tool...";
-    if (names.length === 1) return `Running ${names[0]}...`;
-    if (names.length <= 3) return `Running ${names.join(", ")}...`;
-    return `Running ${names.slice(0, 2).join(", ")} (+${names.length - 2})...`;
+    if (names.length === 0) return t("runningTool") + "...";
+    if (names.length === 1) return `${t("runningTool")} ${names[0]}...`;
+    if (names.length <= 3) return `${t("runningTool")} ${names.join(", ")}...`;
+    return `${t("runningTool")} ${names.slice(0, 2).join(", ")} (+${names.length - 2})...`;
   }
-  if (phase?.kind === "waiting_model") return "Waiting for model...";
-  return "Thinking...";
+  if (phase?.kind === "waiting_model") return t("waitingModel");
+  return t("thinkingDot");
 }
 
 const TYPEWRITER_PHRASES = [
@@ -91,6 +92,7 @@ function Typewriter({ phrases }: { phrases: string[] }) {
 }
 
 export function ChatWindow({ session, newSessionCwd, onAgentEnd, onSessionCreated, onSessionForked, modelsRefreshKey, chatInputRef, onBranchDataChange, onSystemPromptChange, onSessionStatsChange, onContextUsageChange }: Props) {
+  const { t } = useLanguage();
   const {
     loading, error, messages, entryIds, streamState,
     agentRunning, modelNames, modelList, modelThinkingLevels, modelThinkingLevelMaps, toolPreset, thinkingLevel,
@@ -198,7 +200,7 @@ export function ChatWindow({ session, newSessionCwd, onAgentEnd, onSessionCreate
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center text-text-muted">
-        Loading session...
+        {t("loadingSession")}
       </div>
     );
   }
@@ -206,7 +208,7 @@ export function ChatWindow({ session, newSessionCwd, onAgentEnd, onSessionCreate
   if (error) {
     return (
       <div className="flex h-full items-center justify-center text-red-400">
-        {error}
+        {t("error")}: {error}
       </div>
     );
   }
@@ -357,7 +359,7 @@ export function ChatWindow({ session, newSessionCwd, onAgentEnd, onSessionCreate
 
             {agentRunning && !streamState.streamingMessage && (
               <div className="py-2 text-[13px] text-text-muted">
-                <span className="animate-[pulse_1.5s_infinite]">{phaseLabel(agentPhase)}</span>
+                <span className="animate-[pulse_1.5s_infinite]">{phaseLabel(agentPhase, t)}</span>
               </div>
             )}
 

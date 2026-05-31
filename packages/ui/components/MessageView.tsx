@@ -7,6 +7,7 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vs } from "react-syntax-highlighter/dist/cjs/styles/prism";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/cjs/styles/prism";
 import { useTheme } from "@/hooks/useTheme";
+import { useLanguage } from "@/hooks/useLanguage";
 import type {
   AgentMessage,
   UserMessage,
@@ -89,6 +90,7 @@ function UserMessageView({ message, entryId, onFork, forking, onNavigate, prevAs
   prevAssistantEntryId?: string;
   onEditContent?: (content: string) => void;
 }) {
+  const { t } = useLanguage();
   const [hovered, setHovered] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -182,7 +184,7 @@ function UserMessageView({ message, entryId, onFork, forking, onNavigate, prevAs
           }}>
             <button
               onClick={copyContent}
-              title="Copy message"
+              title={t("copyMessage")}
               style={{
                 display: "flex", alignItems: "center", gap: 4,
                 padding: "3px 8px", height: 22,
@@ -207,7 +209,7 @@ function UserMessageView({ message, entryId, onFork, forking, onNavigate, prevAs
                   <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
                 </svg>
               )}
-              {copied ? "Copied" : "Copy"}
+              {copied ? t("copied") : t("copyBtn")}
             </button>
           </div>
           {(canFork || canNavigate) && (
@@ -220,7 +222,7 @@ function UserMessageView({ message, entryId, onFork, forking, onNavigate, prevAs
               {canNavigate && (
                 <button
                   onClick={() => { onNavigate!(prevAssistantEntryId!); onEditContent?.(content); }}
-                  title="Edit from here — branches within this session"
+                  title={t("editFromHereTitle")}
                   style={{
                     display: "flex", alignItems: "center", gap: 4,
                     padding: "3px 8px", height: 22,
@@ -239,14 +241,14 @@ function UserMessageView({ message, entryId, onFork, forking, onNavigate, prevAs
                     <polyline points="15 10 20 15 15 20" />
                     <path d="M4 4v7a4 4 0 0 0 4 4h12" />
                   </svg>
-                  Edit from here
+                  {t("editFromHere")}
                 </button>
               )}
               {canFork && (
                 <button
                   onClick={() => { onFork!(entryId!); }}
                   disabled={forking}
-                  title={forking ? "Creating new session…" : "New session — creates an independent copy from here"}
+                  title={forking ? t("creating") : t("newSessionTitle")}
                   style={{
                     display: "flex", alignItems: "center", gap: 4,
                     padding: "3px 8px", height: 22,
@@ -267,7 +269,7 @@ function UserMessageView({ message, entryId, onFork, forking, onNavigate, prevAs
                     <circle cx="6" cy="18" r="3" />
                     <path d="M18 9a9 9 0 0 1-9 9" />
                   </svg>
-                  {forking ? "Creating…" : "New session"}
+                  {forking ? t("creating") : t("newSessionBtn")}
                 </button>
               )}
             </div>
@@ -294,6 +296,7 @@ function AssistantMessageView({
   showTimestamp?: boolean;
   prevTimestamp?: number;
 }) {
+  const { t } = useLanguage();
   const time = showTimestamp ? formatTime(message.timestamp) : null;
   const blocks = message.content ?? [];
   const [hovered, setHovered] = useState(false);
@@ -467,7 +470,7 @@ function AssistantMessageView({
         {textContent && !isStreaming && (
           <button
             onClick={copyContent}
-            title="Copy message"
+            title={t("copyMessage")}
             style={{
               display: "flex", alignItems: "center", gap: 4,
               padding: "3px 8px", height: 22,
@@ -494,7 +497,7 @@ function AssistantMessageView({
                 <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
               </svg>
             )}
-            {copied ? "Copied" : "Copy"}
+            {copied ? t("copied") : t("copyBtn")}
           </button>
         )}
         {time && !isStreaming && (
@@ -562,6 +565,7 @@ function TextBlock({ block }: { block: TextContent }) {
 }
 
 function ThinkingBlock({ block, duration }: { block: ThinkingContent; duration?: number }) {
+  const { t } = useLanguage();
   const [expanded, setExpanded] = useState(false);
   return (
     <div
@@ -588,7 +592,7 @@ function ThinkingBlock({ block, duration }: { block: ThinkingContent; duration?:
           textAlign: "left",
         }}
       >
-        <span>Thinking</span>
+        <span>{t("thinkingDot")}</span>
         {duration !== undefined && (
           <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--text-dim)", fontVariantNumeric: "tabular-nums" }}>{duration}s</span>
         )}
@@ -703,6 +707,7 @@ function PairedResult({ text, isEmpty, isError }: {
   isEmpty: boolean;
   isError: boolean;
 }) {
+  const { t } = useLanguage();
   return (
     <div
       style={{
@@ -726,7 +731,7 @@ function PairedResult({ text, isEmpty, isError }: {
           opacity: isEmpty ? 0.6 : 1,
         }}
       >
-        {isEmpty ? "(no output)" : text}
+        {isEmpty ? t("noOutput") : text}
       </pre>
     </div>
   );
@@ -769,6 +774,7 @@ function formatUsage(usage: {
 
 function CodeBlock({ code, lang }: { code: string; lang: string }) {
   const { isDark } = useTheme();
+  const { t } = useLanguage();
   const [copied, setCopied] = useState(false);
 
   const copy = () => {
@@ -812,7 +818,7 @@ function CodeBlock({ code, lang }: { code: string; lang: string }) {
             fontSize: 11,
           }}
         >
-          {copied ? "copied" : "copy"}
+          {copied ? t("copied") : t("copyBtn")}
         </button>
       </div>
       <SyntaxHighlighter
