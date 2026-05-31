@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Noto_Sans_Mono } from "next/font/google";
+import { LanguageProvider } from "@/hooks/useLanguage";
 import "./globals.css";
 
 const notoSansMono = Noto_Sans_Mono({
@@ -28,7 +29,7 @@ export default function RootLayout({
         />
       </head>
       <body style={{ height: "100dvh", display: "flex", flexDirection: "column" }}>
-        {children}
+        <LanguageProvider>{children}</LanguageProvider>
       </body>
     </html>
   );
