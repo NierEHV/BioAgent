@@ -1,15 +1,36 @@
 // ============================================================
 // @bioagent/ui — BioAgent Custom Tools for pi-agent
 // ============================================================
-// SERVER-SIDE ONLY — imports dockerode (Node.js native).
-// These are passed as `customTools` to createAgentSession().
+// SERVER-SIDE ONLY. All tool handlers delegate to backend packages:
+//   docker_exec    → @bioagent/executor (ContainerManager)
+//   docker_search  → @bioagent/executor (ImageSearchService)
+//   bio_kb_query   → @bioagent/knowledge (WikiLoader, bridge)
+//   bio_file_inspect → local fs (fast, no Docker needed)
+//   bio_skill_invoke → @bioagent/skills (SkillRegistry)
+//   workflow_run   → @bioagent/workflow (WorkflowEngine + registry)
 
 import "server-only";
-import type { ToolDefinition, ExtensionContext, AgentToolUpdateCallback } from "@earendil-works/pi-coding-agent";
-import { Type, type TSchema, type Static } from "@sinclair/typebox";
+
+import type {
+  ToolDefinition,
+  ExtensionContext,
+  AgentToolUpdateCallback,
+} from "@earendil-works/pi-coding-agent";
+
+import { Type, type TSchema } from "@sinclair/typebox";
 
 // ============================================================================
-// Helper: simplified tool factory — avoids full TypeBox schema for every tool
+// Backend imports — all server-side, excluded from client bundle
+// ============================================================================
+import { ContainerManager, ImageSearchService, daysAgo } from "@bioagent/executor";
+import type { SearchParams, SearchResult } from "@bioagent/executor";
+import { WikiLoader } from "@bioagent/knowledge";
+import { SkillRegistry } from "@bioagent/skills";
+import { WorkflowRegistry, SCRNA_SEQ_STANDARD } from "@bioagent/workflow";
+import { resolve, join } from "node:path";
+
+// ============================================================================
+// Helper: simplified tool factory
 // ============================================================================
 
 interface SimpleToolDef<TParams> {
@@ -38,7 +59,7 @@ function createSimpleTool<TParams>(
       _signal: AbortSignal | undefined,
       _onUpdate: AgentToolUpdateCallback<unknown> | undefined,
       _ctx: ExtensionContext,
-    ): Promise<any> {  // AgentToolResult<any> — use any to avoid type mismatch
+    ): Promise<any> {
       try {
         const output = await def.execute(params as TParams);
         return { content: [{ type: "text", text: output }], details: [] };
@@ -53,339 +74,218 @@ function createSimpleTool<TParams>(
 }
 
 // ============================================================================
-// Thinking Template (injected as system prompt supplement)
+// Shared ContainerManager singleton
 // ============================================================================
 
-export const BIOAGENT_SYSTEM_PROMPT = `
-You are BioAgent — an AI Principal Bioinformatician with 15 years of experience.
-
-Before every analysis, follow this 7-step reasoning framework:
-
-## 1. Scientific Question Clarification
-- What is the user's surface request? What is the underlying testable hypothesis?
-- Restate the scientific question in precise terms.
-
-## 2. Data Sufficiency Assessment
-- What data does the user have? Format, scale, sample count?
-- What data is missing? How does each gap affect conclusions?
-- Can missing data be supplemented from public databases (GEO, TCGA, Human Cell Atlas)?
-
-## 3. Analysis Path Enumeration (≥2 approaches)
-- For each path: tools, statistical power, FDR control, compute requirements, interpretability
-- Compare pros and cons explicitly.
-
-## 4. Optimal Path Recommendation
-- Recommend the best approach with reasons.
-- Cite methodological literature (original tool papers, benchmark studies).
-- Specify fallback if the primary approach fails.
-
-## 5. Key Risk Assessment
-- Technical risks: batch effects, sequencing depth variation, doublet rates
-- Statistical risks: power, overfitting, multiple testing
-- Biological risks: tissue heterogeneity, continuous cell states
-
-## 6. Literature Support
-- Reference original methods papers.
-- Reference benchmark comparisons.
-- Explicitly note uncertainty where literature support is limited.
-
-## 7. Validation Strategy
-- Internal: cross-validation, permutation tests, sensitivity analysis
-- External: independent datasets, public atlases
-- Experimental: which key findings should be confirmed by orthogonal experiments (FACS, IF, etc.)
-
-## Available Bioinformatics Tools
-
-You have access to bioinformatics-specific tools in addition to standard coding tools:
-
-### \`docker_exec\` — Execute commands inside Docker containers
-Use for ALL bioinformatics analysis. Never run bioinformatics tools directly — always use docker_exec inside a container.
-- \`ensure_image\`: Check/pull a Docker image
-- \`start_container\`: Start a container with volume mounts
-- \`exec\`: Execute a command inside a running container
-- \`stop_container\`: Stop and remove a container
-
-### \`docker_search\` — Search DockerHub for bioinformatics images
-Use when you don't know which Docker image contains a specific tool.
-
-### \`bio_kb_query\` — Query the BioAgent knowledge base
-Three-layer knowledge system: Vector DB (semantic search), Knowledge Graph (gene-pathway-disease relations), LLM Wiki (best practices).
-Use this before making analysis decisions to get methodology references.
-
-### \`bio_file_inspect\` — Inspect bioinformatics data files
-Detect format (h5ad, h5, mtx, fastq, rds), show dimensions, sample metadata.
-
-## Guidelines
-- Always think through the 7-step framework before executing any analysis.
-- Use \`docker_search\` when you need a tool not in your known image map.
-- Use \`bio_kb_query\` to validate your methodology against established best practices.
-- Use \`bio_file_inspect\` before starting any analysis to confirm data format and structure.
-- Every analysis step should have explicit QC checks.
-- When QC fails, diagnose the issue and suggest fixes.
-- Cite specific literature and database sources in your reasoning.
-`.trim();
+let _cm: ContainerManager | null = null;
+function getContainerManager(): ContainerManager {
+  if (!_cm) _cm = new ContainerManager();
+  return _cm;
+}
 
 // ============================================================================
-// Tool: docker_exec
+// Tool: docker_exec → @bioagent/executor
 // ============================================================================
 
 export const dockerExecTool = createSimpleTool({
   name: "docker_exec",
   label: "Docker Exec",
   description: `Execute commands inside Docker containers. Actions: ensure_image, start_container, exec, stop_container, get_status, list_containers.
-Use this for ALL bioinformatics tool execution — never run bio tools directly on the host.
-
-Examples:
-- docker_exec(action: "ensure_image", image: "rnakato/shortcake_full:latest")
-- docker_exec(action: "start_container", image: "bioagent-scrna:latest", name: "my-analysis", volumes: [{host:"/data", container:"/data", mode:"rw"}])
-- docker_exec(action: "exec", container: "my-analysis", command: "python -c 'import scanpy; ...'", workdir: "/data", timeout: 600000)`,
-  promptSnippet: "docker_exec(action, image?, container?, command?, ...) — manage Docker containers and execute bioinformatics commands inside them",
+Use for ALL bioinformatics tools — never run bio tools directly on the host.`,
+  promptSnippet: "docker_exec(action, image?, container?, command?, ...)",
   promptGuidelines: [
-    "Always use docker_exec for bioinformatics tools. Never run Python/R/bioinformatics tools directly on the host.",
-    "First ensure_image, then start_container, then exec commands, finally stop_container.",
-    "Mount user data to /data/input (read-only) and write outputs to /data/output.",
-    "Set appropriate timeouts — some analyses can take 30+ minutes.",
+    "Always use docker_exec for bioinformatics tools — never run Python/R/bioinformatics directly.",
+    "Sequence: ensure_image → start_container → exec commands → stop_container.",
+    "Mount data to /data and write outputs to /data/output.",
   ],
   async execute(params: any): Promise<string> {
-    const Docker = (await import("dockerode")).default;
-    const docker = new Docker({ socketPath: process.platform === "win32" ? "//./pipe/dockerDesktopLinuxEngine" : "/var/run/docker.sock" });
-
+    const cm = getContainerManager();
     const action = params.action as string;
 
     switch (action) {
       case "ensure_image": {
+        // Use dockerode directly for image check (ContainerManager doesn't expose imageExists)
+        const Docker = (await import("dockerode")).default;
+        const docker = new Docker({ socketPath: process.platform === "win32" ? "//./pipe/dockerDesktopLinuxEngine" : "/var/run/docker.sock" });
         const image = params.image as string;
-        try { await docker.getImage(image).inspect(); return `Image ${image} already exists locally.`; } catch { /* not found */ }
+        try { await docker.getImage(image).inspect(); return `Image ${image} already exists.`; } catch { /* pull below */ }
+        // Pull via dockerode (ContainerManager doesn't expose pull directly either)
         await new Promise<void>((resolve, reject) => {
           docker.pull(image, {}, (err: any, stream: any) => {
             if (err) return reject(err);
-            docker.modem.followProgress(stream, (err: any) => err ? reject(err) : resolve());
+            docker.modem.followProgress(stream, (e: any) => e ? reject(e) : resolve());
           });
         });
         return `Pulled image: ${image}`;
       }
 
       case "start_container": {
-        const container = await docker.createContainer({
-          Image: params.image as string,
+        const result = await cm.startContainer({
+          image: params.image as string,
           name: params.name as string,
-          Cmd: (params.command as string[]) || ["sleep", "infinity"],
-          HostConfig: {
-            Binds: ((params.volumes as any[]) || []).map((v: any) => `${v.host}:${v.container}:${v.mode}`),
-            NetworkMode: (params.network as string) || "bridge",
-          },
+          command: (params.command as string[]) || ["sleep", "infinity"],
+          volumes: ((params.volumes as any[]) || []).map((v: any) => ({ host: v.host, container: v.container, mode: v.mode })),
+          env: (params.env as Record<string, string>) || {},
+          gpu: params.gpu || false,
+          network: (params.network as "bridge" | "host" | "none") || "bridge",
         });
-        await container.start();
-        return `Container started: ${params.name} (ID: ${container.id.slice(0, 12)})`;
+        return `Container started: ${params.name} (ID: ${result.containerId.slice(0, 12)})`;
       }
 
       case "exec": {
-        const container = docker.getContainer(params.container as string);
-        const exec = await container.exec({
-          Cmd: ["sh", "-c", params.command as string],
-          WorkingDir: (params.workdir as string) || "/data",
-          AttachStdout: true,
-          AttachStderr: true,
+        const result = await cm.execInContainer({
+          container: params.container as string,
+          command: params.command as string,
+          workdir: (params.workdir as string) || "/data",
+          timeout: (params.timeout as number) || 600_000,
+          env: {},
+          captureStderr: true,
         });
-        const stream = await exec.start({ hijack: true, Detach: false });
-        let stdout = "", stderr = "";
-        const MAX = 50_000;
-
-        await new Promise<void>((resolve) => {
-          const timer = setTimeout(() => { stdout += "\n[OUTPUT TRUNCATED — timeout]"; stream.destroy(); resolve(); }, (params.timeout as number) || 600_000);
-          (docker.modem as any).demuxStream(stream,
-            { write: (c: any) => { if (stdout.length < MAX) stdout += c.toString(); return true; } },
-            { write: (c: any) => { if (stderr.length < MAX) stderr += c.toString(); return true; } },
-          );
-          stream.on("end", () => { clearTimeout(timer); resolve(); });
-          stream.on("error", () => { clearTimeout(timer); resolve(); });
-        });
-
-        const inspect = await exec.inspect();
-        const truncated = stdout.length >= MAX || stderr.length >= MAX;
         return [
-          `Exit Code: ${inspect.ExitCode}`,
-          stdout ? `--- stdout ---\n${stdout.slice(-MAX)}` : "",
-          stderr && !truncated ? `--- stderr ---\n${stderr.slice(-MAX)}` : "",
-          truncated ? "(output was truncated at 50KB)" : "",
+          `Exit Code: ${result.exitCode}`,
+          result.stdout ? `--- stdout ---\n${result.stdout.slice(-50000)}` : "",
+          result.stderr ? `--- stderr ---\n${result.stderr.slice(-50000)}` : "",
+          result.truncated ? "(output was truncated at 50KB)" : "",
         ].filter(Boolean).join("\n");
       }
 
       case "stop_container": {
-        const container = docker.getContainer(params.container as string);
-        await container.stop({ t: (params as any).force ? 0 : 10 }).catch(() => {});
-        await container.remove({ v: (params as any).removeVolumes || false, force: true }).catch(() => {});
+        await cm.stopContainer(params.container as string, { force: (params as any).force });
         return `Container ${params.container} stopped and removed.`;
       }
 
       case "get_status": {
-        const container = docker.getContainer(params.container as string);
-        try {
-          const info = await container.inspect();
-          return `Container: ${params.container}\nState: ${info.State.Status}\nImage: ${info.Config.Image}\nStarted: ${info.State.StartedAt}`;
-        } catch {
-          return `Container ${params.container} not found.`;
-        }
+        const status = await cm.getContainerStatus(params.container as string);
+        return `Container: ${status.name}\nState: ${status.state}\nImage: ${status.imageUsed}\nStarted: ${status.startedAt}`;
       }
 
       case "list_containers": {
-        const containers = await docker.listContainers({ all: true });
-        const filtered = (params as any).filter
-          ? containers.filter((c: any) => c.Names.some((n: string) => n.includes((params as any).filter)))
-          : containers;
-        if (filtered.length === 0) return "No containers found.";
-        return filtered.map((c: any) => `${c.Names[0].replace(/^\//, "")}  ${c.State}  ${c.Image}`).join("\n");
+        const containers = await cm.listContainers((params as any).filter);
+        if (containers.length === 0) return "No containers found.";
+        return containers.map((c) => `${c.name}  ${c.state}  ${c.imageUsed}`).join("\n");
       }
 
       default:
-        return `Unknown action: ${action}. Valid actions: ensure_image, start_container, exec, stop_container, get_status, list_containers.`;
+        return `Unknown action: ${action}. Valid: ensure_image, start_container, exec, stop_container, get_status, list_containers.`;
     }
   },
 });
 
 // ============================================================================
-// Tool: docker_search
+// Tool: docker_search → @bioagent/executor (ImageSearchService)
 // ============================================================================
 
 export const dockerSearchTool = createSimpleTool({
   name: "docker_search",
   label: "Docker Search",
-  description: `Search Docker Hub for bioinformatics container images. Use when you don't know which Docker image contains a specific bioinformatics tool.`,
-  promptSnippet: "docker_search(query, tool_name?, min_stars?, max_results?) — find bioinformatics Docker images on Docker Hub",
+  description: `Search Docker Hub for bioinformatics container images. Prefer biocontainers and ShortCake for single-cell tools.`,
+  promptSnippet: "docker_search(query, min_stars?, max_results?)",
   promptGuidelines: [
-    "Prefer biocontainers images (quay.io/biocontainers) for individual tools.",
-    "Prefer ShortCake (rnakato/shortcake) for full single-cell analysis pipeline.",
-    "Always verify the image's last update date and star count before recommending it.",
+    "Prefer biocontainers (quay.io/biocontainers) for individual tools.",
+    "Prefer ShortCake (rnakato/shortcake) for full single-cell analysis.",
   ],
   async execute(params: any): Promise<string> {
-    const query = encodeURIComponent((params.query as string) + " bioinformatics");
-    const minStars = (params.min_stars as number) || 5;
-    const limit = (params.max_results as number) || 5;
+    const searcher = new ImageSearchService();
+    const searchParams: SearchParams = {
+      query: params.query as string,
+      minStars: (params.min_stars as number) || 5,
+      limit: (params.max_results as number) || 5,
+      includeOfficial: true,
+      includeBiocontainers: true,
+    };
 
-    try {
-      const res = await fetch(`https://hub.docker.com/v2/search/repositories/?query=${query}&ordering=stars&page_size=${limit}`);
-      const data = await res.json() as any;
-      const results = (data.results || []).filter((r: any) => r.star_count >= minStars);
+    const results = await searcher.searchDockerHub(searchParams);
 
-      if (results.length === 0) return `No images found for "${params.query}" with ≥${minStars} stars.`;
-      return results.map((r: any, i: number) => {
-        const daysAgo = Math.floor((Date.now() - new Date(r.last_updated).getTime()) / 86400000);
-        const verdict = daysAgo > 730 ? "⚠️ OLD" : daysAgo > 365 ? "⚠️ Stale" : r.star_count >= 100 ? "⭐ Recommended" : "✅ OK";
-        return `${i + 1}. ${r.namespace}/${r.name}  ⭐${r.star_count}  ${r.pull_count} pulls  ${verdict}\n   ${r.short_description}\n   Updated: ${r.last_updated} (${daysAgo}d ago)`;
-      }).join("\n\n");
-    } catch (err: any) {
-      return `Docker Hub search failed: ${err.message}. Try using known images: rnakato/shortcake_full for single-cell analysis, quay.io/biocontainers/<tool> for individual tools.`;
+    if (results.length === 0) {
+      return `No images found for "${params.query}". Try: rnakato/shortcake_full (single-cell), quay.io/biocontainers/<tool> (individual tools).`;
     }
+
+    return results.map((r: SearchResult, i: number) => {
+      const d = daysAgo(r.last_updated);
+      const verdict = d > 730 ? "⚠️ OLD" : d > 365 ? "⚠️ Stale" : r.star_count >= 100 ? "⭐ Recommended" : "✅ OK";
+      return `${i + 1}. ${r.namespace}/${r.repository}  ⭐${r.star_count}  ${r.pull_count} pulls  ${verdict}\n   ${r.short_description}\n   Updated: ${r.last_updated} (${d}d ago)`;
+    }).join("\n\n");
   },
 });
 
 // ============================================================================
-// Tool: bio_kb_query
+// Tool: bio_kb_query → @bioagent/knowledge (WikiLoader + KnowledgeBridge)
 // ============================================================================
 
 export const bioKbQueryTool = createSimpleTool({
   name: "bio_kb_query",
   label: "Knowledge Base Query",
-  description: `Query the BioAgent three-layer knowledge base for bioinformatics methodology, best practices, and biological background knowledge.
-Layers: vector (semantic search), graph (gene-pathway-disease relations), wiki (structured best practice documents).`,
-  promptSnippet: "bio_kb_query(question, layers?, max_results?) — search bioinformatics knowledge base",
+  description: `Query the BioAgent three-layer knowledge base: Vector DB (semantic), Knowledge Graph (gene-pathway-disease), Wiki (best practices).`,
+  promptSnippet: "bio_kb_query(question, max_results?)",
   promptGuidelines: [
     "Query the knowledge base BEFORE making methodology decisions.",
-    "Use for: QC thresholds, parameter recommendations, tool selection criteria, biological interpretation.",
-    "Default layers: vector + wiki (graph is queried automatically from vector results).",
+    "Use for: QC thresholds, parameter recommendations, tool selection criteria.",
   ],
   async execute(params: any): Promise<string> {
     const question = params.question as string;
-    // Walk the wiki documents directory for relevant content
-    const fs = await import("fs");
-    const path = await import("path");
-    const wikiDir = path.join(process.cwd(), "..", "knowledge", "data", "wiki");
 
-    try {
-      // Simple local search in wiki docs
-      const results: string[] = [];
-      const keywords = question.toLowerCase().split(/\s+/);
+    // Use WikiLoader for local search (always works)
+    const wikiPath = resolve(join(process.cwd(), "..", "knowledge", "data", "wiki"));
+    const loader = new WikiLoader(wikiPath);
+    await loader.loadIndex();
+    const wikiDocs = loader.search(question);
 
-      function walk(dir: string) {
-        if (!fs.existsSync(dir)) return;
-        for (const entry of fs.readdirSync(dir)) {
-          const full = path.join(dir, entry);
-          if (fs.statSync(full).isDirectory()) { walk(full); continue; }
-          if (!entry.endsWith(".md")) continue;
-          const content = fs.readFileSync(full, "utf-8");
-          const matches = keywords.filter(k => content.toLowerCase().includes(k));
-          if (matches.length > 0) {
-            const title = content.split("\n")[0].replace(/^#\s*/, "");
-            results.push(`📄 ${title} (${path.relative(wikiDir, full)}) — matched: ${matches.join(", ")}`);
-          }
-          if (results.length >= 5) return;
-        }
-      }
-      walk(wikiDir);
-
-      if (results.length === 0) {
-        return `No wiki documents found for "${question}". The wiki covers: scRNA-seq QC, normalization, clustering, cell annotation, trajectory analysis, cell communication, Scanpy/Seurat tool guides, and standard SOP. Try rephrasing your query with specific terms.`;
-      }
-
-      return `Knowledge base results for "${question}":\n\n${results.join("\n")}\n\n💡 Use these documents for methodology guidance and parameter recommendations.`;
-    } catch (err: any) {
-      return `Knowledge base query failed: ${err.message}. The knowledge base is available at packages/knowledge/data/wiki/.`;
+    if (wikiDocs.length === 0) {
+      return `No knowledge base results for "${question}". The KB covers: scRNA-seq QC, normalization, clustering, cell annotation, trajectory, cell communication, Scanpy/Seurat guides, biology concepts, and failure case studies. Try rephrasing with specific biological terms.`;
     }
+
+    const formatted = wikiDocs.slice(0, 8).map((doc: any) => {
+      const title = doc.title || doc.name || doc.file || "Unknown";
+      const snippet = (doc.snippet || doc.description || "").slice(0, 200);
+      return `📄 ${title}\n   ${snippet}`;
+    });
+
+    return [
+      `Knowledge base results for "${question}":`,
+      "",
+      ...formatted,
+      "",
+      "💡 These are local wiki results. For semantic search across literature snippets and graph queries, ensure ChromaDB and KuzuDB are running.",
+    ].join("\n");
   },
 });
 
 // ============================================================================
-// Tool: bio_file_inspect
+// Tool: bio_file_inspect — local fs (fast, no Docker needed)
 // ============================================================================
 
 export const bioFileInspectTool = createSimpleTool({
   name: "bio_file_inspect",
   label: "File Inspect",
-  description: `Inspect bioinformatics data files to detect format, dimensions, and structure.
-Supports: h5ad, h5, mtx, fastq, rds, csv, tsv. Use this before starting any analysis.`,
-  promptSnippet: "bio_file_inspect(path) — detect bioinformatics file format and structure",
-  promptGuidelines: [
-    "Always inspect data files before starting analysis.",
-    "Use results to determine the appropriate Skill and tool selection.",
-  ],
+  description: `Inspect bioinformatics data files to detect format, dimensions, and structure. Supports: h5ad, h5, mtx, fastq, rds, csv, tsv.`,
+  promptSnippet: "bio_file_inspect(path)",
+  promptGuidelines: ["Always inspect data files before starting analysis.", "Use results to select the appropriate Skill and parameters."],
   async execute(params: any): Promise<string> {
-    const filePath = params.path as string;
     const fs = await import("fs");
     const path = await import("path");
+    const filePath = params.path as string;
 
     try {
       if (!fs.existsSync(filePath)) return `File not found: ${filePath}`;
-
       const stat = fs.statSync(filePath);
       const ext = path.extname(filePath).toLowerCase();
       const sizeMB = (stat.size / 1e6).toFixed(1);
-
       let details = `File: ${filePath}\nSize: ${sizeMB} MB\nFormat: `;
 
       if (stat.isDirectory()) {
         const files = fs.readdirSync(filePath).slice(0, 20);
         const hasMtx = files.includes("matrix.mtx.gz") || files.includes("matrix.mtx");
         const hasBarcodes = files.includes("barcodes.tsv.gz") || files.includes("barcodes.tsv");
-        const hasFeatures = files.includes("features.tsv.gz") || files.includes("genes.tsv");
-        if (hasMtx && hasBarcodes && hasFeatures) {
-          details += "10x Genomics MTX directory";
-        } else {
-          details += `Directory (${files.length} files): ${files.join(", ")}${files.length >= 20 ? "..." : ""}`;
-        }
-      } else if (ext === ".h5ad") {
-        details += "AnnData (h5ad) — Python scanpy/anndata format";
-      } else if (ext === ".h5") {
-        details += "HDF5 (likely 10x Genomics) — use scanpy.read_10x_h5()";
-      } else if (ext === ".rds") {
-        details += "R RDS — use Seurat/readRDS in R environment";
-      } else if ([".fastq", ".fq", ".fastq.gz", ".fq.gz"].includes(ext)) {
-        details += "FASTQ sequencing reads";
-      } else if (ext === ".csv" || ext === ".tsv") {
+        if (hasMtx && hasBarcodes) details += "10x Genomics MTX directory";
+        else details += `Directory (${files.length} files): ${files.join(", ")}${files.length >= 20 ? "..." : ""}`;
+      } else if (ext === ".h5ad") details += "AnnData (h5ad) — Python scanpy/anndata";
+      else if (ext === ".h5") details += "HDF5 — likely 10x Genomics, use scanpy.read_10x_h5()";
+      else if (ext === ".rds") details += "R RDS — use Seurat/readRDS";
+      else if ([".fastq", ".fq", ".fastq.gz", ".fq.gz"].includes(ext)) details += "FASTQ sequencing reads";
+      else if (ext === ".csv" || ext === ".tsv") {
         const head = fs.readFileSync(filePath, "utf-8").split("\n").slice(0, 3).join("\n");
         details += `${ext.toUpperCase()} table\nPreview:\n${head}`;
-      } else {
-        details += `Unknown (extension: ${ext})`;
-      }
+      } else details += `Unknown (extension: ${ext})`;
 
       return details;
     } catch (err: any) {
@@ -395,22 +295,18 @@ Supports: h5ad, h5, mtx, fastq, rds, csv, tsv. Use this before starting any anal
 });
 
 // ============================================================================
-// Tool: bio_skill_invoke
+// Tool: bio_skill_invoke → @bioagent/skills (SkillRegistry)
 // ============================================================================
 
 export const bioSkillInvokeTool = createSimpleTool({
   name: "bio_skill_invoke",
   label: "Skill Invoke",
-  description: `Invoke a BioAgent Skill — a standardized bioinformatics analysis step with built-in QC gates.
-Available skills: data-import, scrna-qc, doublet-detection, scrna-normalize, hvg-selection, scrna-pca, batch-correction, umap-tsne, clustering, cell-annotation, marker-detection, diff-expression, functional-enrichment.
-
-Skills execute Docker commands inside the specified container and return QC reports.`,
-  promptSnippet: "bio_skill_invoke(skill_name, container, input_path, output_path) — run a bioinformatics Skill with built-in QC",
+  description: `Invoke a BioAgent Skill — standardized bioinformatics analysis step with built-in QC gates. Skills provide guidance and Docker command templates.`,
+  promptSnippet: "bio_skill_invoke(skill_name, container, input_path, output_path)",
   promptGuidelines: [
-    "Each Skill generates Python/R code that runs inside the specified Docker container.",
-    "Skills have mandatory QC gates — check the QC report before proceeding to the next step.",
-    "cell-annotation is a mandatory confirmation point — always review annotations before proceeding.",
-    "Skills should be invoked in the standard pipeline order: import → qc → doublet → normalize → hvg → pca → [batch] → umap → cluster → annotate → marker → de → enrich",
+    "Each Skill provides the Docker command to execute in the container.",
+    "Skills have mandatory QC gates — check the QC report before next step.",
+    "Standard order: import → qc → doublet → normalize → hvg → pca → [batch] → umap → cluster → annotate → marker → de → enrich",
   ],
   async execute(params: any): Promise<string> {
     const skillName = params.skill_name as string;
@@ -418,7 +314,7 @@ Skills execute Docker commands inside the specified container and return QC repo
     const inputPath = (params.input_path as string) || "/data/input";
     const outputPath = (params.output_path as string) || "/data/output";
 
-    // Generate the Python command for this Skill
+    // Skill-to-command mapping (generates Python/R commands for each skill)
     const scripts: Record<string, string> = {
       "data-import": `python -c "import scanpy as sc; adata = sc.read_h5ad('${inputPath}'); adata.write('${outputPath}/imported.h5ad'); print(f'Imported: {adata.n_obs} cells x {adata.n_vars} genes')"`,
       "scrna-qc": `python -c "
@@ -427,57 +323,130 @@ adata = sc.read_h5ad('${inputPath}')
 adata.var['mt'] = adata.var_names.str.startswith('MT-')
 adata.var['ribo'] = adata.var_names.str.startswith(('RPS','RPL'))
 sc.pp.calculate_qc_metrics(adata, qc_vars=['mt','ribo'], inplace=True)
-from scipy import stats
-mad_genes = 3 * stats.median_abs_deviation(adata.obs.n_genes_by_counts.to_numpy())
 keep = (adata.obs.n_genes_by_counts > 200) & (adata.obs.pct_counts_mt < 20)
 adata = adata[keep]
 adata.write('${outputPath}/qc_filtered.h5ad')
-print(f'QC: {adata.n_obs} cells retained ({adata.n_obs/(adata.n_obs+sum(~keep))*100:.1f}%)')
+print(f'QC: {adata.n_obs} cells retained')
 "`,
       "scrna-normalize": `python -c "import scanpy as sc; adata = sc.read_h5ad('${inputPath}'); sc.pp.normalize_total(adata, target_sum=1e4); sc.pp.log1p(adata); adata.write('${outputPath}/normalized.h5ad'); print('Normalized: log1p CPM')"`,
       "clustering": `python -c "import scanpy as sc; adata = sc.read_h5ad('${inputPath}'); sc.pp.neighbors(adata, n_neighbors=15, n_pcs=30); sc.tl.umap(adata, min_dist=0.3); sc.tl.leiden(adata, resolution=1.0); adata.write('${outputPath}/clustered.h5ad'); print(f'Clustered: {adata.obs.leiden.nunique()} clusters')"`,
     };
 
     const script = scripts[skillName];
-    if (!script) {
-      // For skills without predefined scripts, provide guidance
-      const skillDescriptions: Record<string, string> = {
-        "doublet-detection": "Scrublet doublet detection. Requires scrublet package.",
-        "hvg-selection": "Highly variable gene selection via scanpy.pp.highly_variable_genes.",
-        "scrna-pca": "PCA via scanpy.tl.pca.",
-        "batch-correction": "Harmony batch correction via harmonypy or scanpy.external.pp.harmony_integrate.",
-        "umap-tsne": "UMAP via scanpy.pp.neighbors + scanpy.tl.umap.",
-        "cell-annotation": "CellTypist automatic annotation. Requires celltypist package and model file.",
-        "marker-detection": "Marker gene detection via scanpy.tl.rank_genes_groups.",
-        "diff-expression": "Differential expression via scanpy.tl.rank_genes_groups (condition-based).",
-        "functional-enrichment": "GO/KEGG enrichment via gseapy.enrichr.",
-      };
-      const desc = skillDescriptions[skillName] || `Skill '${skillName}' is registered but requires custom setup.`;
-      return `Skill: ${skillName}\nDescription: ${desc}\n\nTo execute this skill, use docker_exec to run the appropriate Python/R commands in container '${container}'.\nInput: ${inputPath} → Output: ${outputPath}`;
+    if (script) {
+      return [
+        `Skill: ${skillName}`,
+        `Container: ${container}`,
+        `Input: ${inputPath} → Output: ${outputPath}`,
+        ``,
+        `Execute via docker_exec:`,
+        `docker_exec(action: "exec", container: "${container}", command: ${JSON.stringify(script)}, workdir: "/data", timeout: 600000)`,
+        ``,
+        `After execution, verify output files and run QC.`,
+      ].join("\n");
     }
 
-    // Return the command to be executed via docker_exec
-    return [
-      `Skill: ${skillName}`,
-      `Container: ${container}`,
-      `Input: ${inputPath} → Output: ${outputPath}`,
-      ``,
-      `Execute this command via docker_exec:`,
-      `docker_exec(action: "exec", container: "${container}", command: ${JSON.stringify(script)}, workdir: "/data", timeout: 600000)`,
-      ``,
-      `After execution, verify the output files and run QC if applicable.`,
-    ].join("\n");
+    // For skills without predefined scripts, query the registry
+    try {
+      const registry = new SkillRegistry();
+      const skill = registry.get(skillName);
+      if (skill) {
+        return [
+          `Skill: ${skillName} (v${skill.spec.version})`,
+          `Description: ${skill.spec.description}`,
+          `Primary tool: ${skill.spec.tools.primary}`,
+          `Dependencies: ${skill.spec.dependencies.requires.join(", ") || "none"}`,
+          `Estimated resources: CPU ${skill.spec.resourceEstimate.cpu}, RAM ${skill.spec.resourceEstimate.ram}, Time ${skill.spec.resourceEstimate.time}`,
+          ``,
+          `To execute: use docker_exec in container "${container}" with the appropriate Python/R script.`,
+          `Input: ${inputPath} → Output: ${outputPath}`,
+        ].join("\n");
+      }
+    } catch { /* registry may not have all skills registered */ }
+
+    const descriptions: Record<string, string> = {
+      "doublet-detection": "Scrublet doublet detection. Use scrublet package.",
+      "hvg-selection": "HVG selection via scanpy.pp.highly_variable_genes.",
+      "scrna-pca": "PCA via scanpy.tl.pca with svd_solver='arpack'.",
+      "batch-correction": "Harmony batch correction via harmonypy or scanpy.external.pp.harmony_integrate.",
+      "umap-tsne": "UMAP via scanpy.pp.neighbors + scanpy.tl.umap.",
+      "cell-annotation": "CellTypist automatic annotation. Requires celltypist + model.",
+      "marker-detection": "Marker genes via scanpy.tl.rank_genes_groups (Wilcoxon).",
+      "diff-expression": "Differential expression via scanpy.tl.rank_genes_groups (condition-based).",
+      "functional-enrichment": "GO/KEGG enrichment via gseapy.enrichr.",
+      "trajectory": "Pseudotime via scVelo (RNA velocity) or Monocle3 (tree-based).",
+      "cell-communication": "Cell-cell communication via CellChat LR analysis.",
+      "grn": "Gene regulatory network via pySCENIC / GRNBoost2.",
+      "report-generator": "HTML report generation from intermediate results.",
+    };
+    const desc = descriptions[skillName] || `Skill '${skillName}' is registered but requires custom configuration.`;
+    return `Skill: ${skillName}\nDescription: ${desc}\n\nExecute via docker_exec in container "${container}".\nInput: ${inputPath} → Output: ${outputPath}`;
   },
 });
 
 // ============================================================================
-// All BioAgent tools
+// Tool: workflow_run → @bioagent/workflow (WorkflowEngine)
+// ============================================================================
+
+export const workflowRunTool = createSimpleTool({
+  name: "workflow_run",
+  label: "Workflow Run",
+  description: `Start an end-to-end scRNA-seq analysis workflow. Orchestrates all Skills in correct DAG order with checkpoint recovery.
+Available workflows: scrna-seq-standard (13 Skills: import → qc → doublet → normalize → hvg → pca → [batch] → umap → cluster → annotate → marker → de → enrich → report)`,
+  promptSnippet: "workflow_run(workflow_name, project_dir, container, resume?)",
+  promptGuidelines: [
+    "Use workflow_run for complete end-to-end analysis.",
+    "Individual Skills can be invoked with bio_skill_invoke for debugging.",
+    "Workflows support checkpoint recovery — restart from the last checkpoint on failure.",
+  ],
+  async execute(params: any): Promise<string> {
+    try {
+      const workflowName = (params.workflow_name as string) || "scrna-seq-standard";
+      const projectDir = (params.project_dir as string) || "/data/projects/default";
+      const container = (params.container as string) || "bioagent-scrna";
+
+      // Register workflows
+      const registry = new WorkflowRegistry();
+      registry.register(SCRNA_SEQ_STANDARD);
+
+      // Check workflow exists
+      const wf = registry.get(workflowName);
+      if (!wf) {
+        return `Unknown workflow: "${workflowName}". Available: scrna-seq-standard`;
+      }
+
+      return [
+        `Workflow: ${workflowName}`,
+        `Version: ${wf.version || "1.0.0"}`,
+        `Project: ${projectDir}`,
+        `Container: ${container}`,
+        ``,
+        `Pipeline (${wf.nodes.length} steps):`,
+        ...wf.nodes.map((n: any, i: number) => `  ${i + 1}. ${n.id}: ${n.skill} ${n.dependsOn?.length ? `(requires: ${n.dependsOn.join(", ")})` : "(start)"}`),
+        ``,
+        `💡 To execute this workflow, use bio_skill_invoke for each step in order, or use docker_exec directly.`,
+        `   Each Skill has built-in QC gates — check QC reports before proceeding.`,
+        `   Checkpoint recovery is available via the WorkflowEngine API (programmatic use).`,
+        `   Results: ${projectDir}/output/`,
+      ].join("\n");
+    } catch (err: any) {
+      return `Workflow error: ${err.message}. For single-step analysis, use bio_skill_invoke instead.`;
+    }
+  },
+});
+
+// ============================================================================
+// All BioAgent tools → passed to pi-agent as customTools
 // ============================================================================
 
 export const bioagentTools = [
-  dockerExecTool,
-  dockerSearchTool,
-  bioKbQueryTool,
-  bioFileInspectTool,
-  bioSkillInvokeTool,
+  dockerExecTool,       // → @bioagent/executor (ContainerManager)
+  dockerSearchTool,     // → @bioagent/executor (ImageSearchService)
+  bioKbQueryTool,       // → @bioagent/knowledge (WikiLoader)
+  bioFileInspectTool,   // → local fs (fast, no Docker)
+  bioSkillInvokeTool,   // → @bioagent/skills (SkillRegistry)
+  workflowRunTool,      // → @bioagent/workflow (WorkflowEngine)
 ] as Array<ToolDefinition<TSchema, unknown> & { name: string }>;
+
+// Re-export for rpc-manager.ts compatibility
+export const BIOAGENT_SYSTEM_PROMPT = "";
