@@ -43,7 +43,51 @@ export interface ToolCallContent {
   input: Record<string, unknown>;
 }
 
-export type AssistantContentBlock = TextContent | ImageContent | ThinkingContent | ToolCallContent;
+// ============================================================================
+// BioAgent — inline bioinformatics content blocks
+// ============================================================================
+
+/** QC gate result — single check within a QC report */
+export interface QcGateResult {
+  name: string;
+  result: "pass" | "warn" | "fail";
+  detail: string;
+  suggestion?: string;
+  canAutoFix?: boolean;
+}
+
+/** QC report — generated after each bioinformatics tool execution */
+export interface QcReportContent {
+  type: "qc_report";
+  skillName: string;
+  overall: "pass" | "warn" | "fail";
+  gates: QcGateResult[];
+}
+
+/** Workflow progress update — shows pipeline execution status */
+export interface ProgressContent {
+  type: "progress";
+  workflowName: string;
+  nodes: Array<{
+    id: string;
+    skill: string;
+    status: "completed" | "running" | "pending" | "failed" | "skipped";
+  }>;
+  progress: number; // 0–1
+}
+
+/** Knowledge reference — citation or best-practice document */
+export interface KnowledgeRefContent {
+  type: "knowledge_ref";
+  title: string;
+  snippet: string;
+  source: string; // wiki path or DOI
+  relevance?: number;
+}
+
+export type BioContentBlock = QcReportContent | ProgressContent | KnowledgeRefContent;
+
+export type AssistantContentBlock = TextContent | ImageContent | ThinkingContent | ToolCallContent | BioContentBlock;
 
 export interface UserMessage {
   role: "user";

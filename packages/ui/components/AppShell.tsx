@@ -19,13 +19,6 @@ import type { ChatInputHandle } from "./ChatInput";
 
 gsap.registerPlugin(useGSAP);
 
-// BioAgent — bioinformatics panel components
-import { ProgressTracker, VizPanel, WorkflowSelector } from "@/components/bioagent";
-import QCReportCard, { type QCGateData } from "@/components/bioagent/QCReportCard";
-import ThinkingPanel, { type ThinkingSection } from "@/components/bioagent/ThinkingPanel";
-import KnowledgeRef, { type KnowledgeReference } from "@/components/bioagent/KnowledgeRef";
-import type { WorkflowNodeState } from "@/hooks/useWorkflow";
-
 export function AppShell() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -43,102 +36,8 @@ export function AppShell() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const chatInputRef = useRef<ChatInputHandle | null>(null);
   const topBarRef = useRef<HTMLDivElement>(null);
-
-  // ---------------------------------------------------------------------------
-  // BioAgent — right-side bioinformatics panel state
-  // ---------------------------------------------------------------------------
-  const [bioPanelOpen, setBioPanelOpen] = useState(false);
-  const [activeBioTab, setActiveBioTab] = useState<"thinking" | "progress" | "qc" | "viz" | "knowledge">("thinking");
-
-  // Bioagent data — in production these come from SSE events / API
-  const [thinkingSections, setThinkingSections] = useState<ThinkingSection[]>([]);
-  // Compute demo thinking sections based on current language
-  const demoSections: ThinkingSection[] = useMemo(() => [
-    { index: 1, title: lang === "zh" ? "科学问题还原" : "Scientific Question", content: lang === "zh" ? "用户想从scRNA-seq数据中鉴定肿瘤微环境中的免疫抑制亚群" : "Identify immunosuppressive subpopulations in the tumor microenvironment from scRNA-seq data", completed: true, isLoading: false },
-    { index: 2, title: lang === "zh" ? "数据充分性评估" : "Data Sufficiency", content: lang === "zh" ? "检测到20个样本，45,000个细胞，格式为10x h5" : "Detected 20 samples, 45,000 cells, 10x h5 format", completed: true, isLoading: false },
-    { index: 3, title: lang === "zh" ? "分析路径枚举" : "Analysis Paths", content: lang === "zh" ? "方案A: Seurat标准流程 (推荐)\n方案B: Scanpy + Harmony批次校正" : "Option A: Seurat standard pipeline (recommended)\nOption B: Scanpy + Harmony batch correction", completed: true, isLoading: false },
-    { index: 4, title: lang === "zh" ? "最优路径推荐" : "Recommendation", content: lang === "zh" ? "推荐方案A，理由: 样本量充足，Seurat在免疫细胞注释上有成熟的参考数据集" : "Recommend Option A: sufficient sample size, mature reference datasets for immune cell annotation in Seurat", completed: true, isLoading: false },
-    { index: 5, title: lang === "zh" ? "关键风险点" : "Key Risks", content: lang === "zh" ? "检测到2个批次，可能存在批次效应\n8%细胞线粒体比例偏高" : "2 batches detected, possible batch effects\n8% cells have elevated mitochondrial ratio", completed: true, isLoading: false },
-    { index: 6, title: lang === "zh" ? "文献支撑" : "Literature", content: lang === "zh" ? "Luecken & Theis (2019) 单细胞最佳实践\nHeumos et al. (2023) 跨模态分析指南" : "Luecken & Theis (2019) scRNA best practices\nHeumos et al. (2023) cross-modality analysis guide", completed: true, isLoading: false },
-    { index: 7, title: lang === "zh" ? "验证策略" : "Validation", content: lang === "zh" ? "内部: 交叉验证 + 置换检验\n外部: 与TCGA肺腺癌数据对比\n实验: 建议FACS验证关键marker" : "Internal: cross-validation + permutation test\nExternal: compare with TCGA lung adenocarcinoma\nExperimental: FACS validation of key markers", completed: true, isLoading: false },
-  ], [lang]);
-  const displaySections = thinkingSections.length > 0 ? thinkingSections : demoSections;
-  const [isThinking, setIsThinking] = useState(false);
-  const [workflowNodes, setWorkflowNodes] = useState<WorkflowNodeState[]>([]);
-  const [workflowProgress, setWorkflowProgress] = useState(0);
-  const [workflowRunId, setWorkflowRunId] = useState<string | null>(null);
-  const [qcReports, setQcReports] = useState<Array<{ skillName: string; overall: "pass" | "warn" | "fail"; gates: QCGateData[] }>>([]);
-  const [visualizations, setVisualizations] = useState<Array<{ type: "umap" | "volcano" | "heatmap" | "dotplot" | "violin"; url: string; metadata: Record<string, unknown> }>>([]);
-  const [knowledgeRefs, setKnowledgeRefs] = useState<KnowledgeReference[]>([]);
-  const [knowledgeAnswer, setKnowledgeAnswer] = useState<string>("");
-  const [knowledgeLoading, setKnowledgeLoading] = useState(false);
-  const [knowledgeError, setKnowledgeError] = useState<string | null>(null);
-
-  // Fetch knowledge from real API when knowledge tab is activated
-  useEffect(() => {
-    if (activeBioTab !== "knowledge" || knowledgeRefs.length > 0) return;
-    setKnowledgeLoading(true);
-    setKnowledgeError(null);
-    fetch("/api/knowledge?question=scRNA-seq best practices")
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.references) {
-          setKnowledgeRefs(data.references.map((ref: any) => ({
-            title: ref.title || ref.snippet?.slice(0, 50) || "Untitled",
-            type: ref.type || "docs",
-            doi: ref.doi,
-            url: ref.url,
-            relevance: ref.relevance || 0.7,
-          })));
-        }
-        if (data.answer) setKnowledgeAnswer(data.answer);
-        setKnowledgeLoading(false);
-      })
-      .catch((err) => {
-        setKnowledgeError(err.message);
-        setKnowledgeLoading(false);
-      });
-  }, [activeBioTab, knowledgeRefs.length]);
-
-  // Fetch workflows from real API
-  useEffect(() => {
-    fetch("/api/workflow")
-      .then((r) => r.json())
-      .then((data) => {
-        if (Array.isArray(data) && data.length > 0 && workflowNodes.length === 0) {
-          const allNodes: WorkflowNodeState[] = [];
-          data.forEach((wf: any) => {
-            (wf.nodes || []).forEach((n: any) => {
-              allNodes.push({
-                nodeId: n.id,
-                skill: n.skill,
-                status: "pending",
-                startedAt: null,
-                endedAt: null,
-                retryCount: 0,
-                error: null,
-              });
-            });
-          });
-          setWorkflowNodes(allNodes);
-        }
-      })
-      .catch(() => {});
-  }, [workflowNodes.length]);
-
-  // Refs for GSAP panel animations
-  const bioPanelRef = useRef<HTMLDivElement>(null);
-  const bioPanelContentRef = useRef<HTMLDivElement>(null);
   const rightPanelRef = useRef<HTMLDivElement>(null);
 
-  // Bio-tab definitions
-  const bioTabs = [
-    { id: "thinking" as const, label: tl("tabThinking"), icon: "🧠" },
-    { id: "progress" as const, label: tl("tabProgress"), icon: "📊" },
-    { id: "qc" as const, label: tl("tabQC"), icon: "✅" },
-    { id: "viz" as const, label: tl("tabViz"), icon: "📈" },
-    { id: "knowledge" as const, label: tl("tabKnowledge"), icon: "📚" },
-  ];
 
   // Branch navigator state — populated by ChatWindow via onBranchDataChange
   const [branchTree, setBranchTree] = useState<SessionTreeNode[]>([]);
@@ -200,44 +99,8 @@ export function AppShell() {
   const [rightPanelOpen, setRightPanelOpen] = useState(false);
 
   // Track previous panel open states for GSAP transitions
-  const prevBioPanelOpenRef = useRef(false);
   const prevRightPanelOpenRef = useRef(false);
 
-  // GSAP: bio panel open/close animation
-  useGSAP(
-    () => {
-      if (!bioPanelRef.current) return;
-      const panel = bioPanelRef.current;
-      const mm = gsap.matchMedia();
-
-      mm.add("(prefers-reduced-motion: reduce)", () => {
-        // Instant show/hide without animation
-        gsap.set(panel, { x: bioPanelOpen ? 0 : 380 });
-      });
-
-      mm.add("(prefers-reduced-motion: no-preference)", () => {
-        if (bioPanelOpen && !prevBioPanelOpenRef.current) {
-          // Opening: panel starts hidden at x=380
-          gsap.to(panel, {
-            x: 0,
-            duration: 0.35,
-            ease: "power3.out",
-          });
-        } else if (!bioPanelOpen && prevBioPanelOpenRef.current) {
-          // Closing: animate to x=380
-          gsap.to(panel, {
-            x: 380,
-            duration: 0.25,
-            ease: "power2.in",
-          });
-        }
-      });
-
-      prevBioPanelOpenRef.current = bioPanelOpen;
-      return () => mm.revert();
-    },
-    { scope: undefined, dependencies: [bioPanelOpen] }
-  );
 
   // GSAP: right panel open/close animation
   useGSAP(
@@ -272,23 +135,6 @@ export function AppShell() {
     { scope: undefined, dependencies: [rightPanelOpen] }
   );
 
-  // GSAP: bio tab content switching
-  useGSAP(
-    () => {
-      if (!bioPanelContentRef.current) return;
-      const mm = gsap.matchMedia();
-      mm.add("(prefers-reduced-motion: reduce)", () => {});
-      mm.add("(prefers-reduced-motion: no-preference)", () => {
-        gsap.fromTo(
-          bioPanelContentRef.current,
-          { autoAlpha: 0, y: 8 },
-          { autoAlpha: 1, y: 0, duration: 0.2, ease: "power2.out" }
-        );
-      });
-      return () => mm.revert();
-    },
-    { scope: undefined, dependencies: [activeBioTab] }
-  );
 
   const handleAtMention = useCallback((relativePath: string) => {
     chatInputRef.current?.insertText("`" + relativePath + "`");
@@ -792,140 +638,6 @@ export function AppShell() {
         </div>
       </div>
 
-      {/* BioAgent right panel — bioinformatics tools */}
-      <div
-        ref={bioPanelRef}
-        className={`bioagent-panel bio-panel-container${bioPanelOpen ? " bio-panel-open" : " bio-panel-closed"}`}
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          borderLeft: "1px solid var(--border)",
-          background: "var(--bg)",
-          flexShrink: 0,
-          overflow: "hidden",
-          width: 380,
-          minWidth: 380,
-          transform: `translateX(${bioPanelOpen ? 0 : 380}px)`,
-          marginRight: bioPanelOpen ? 0 : -380,
-        }}
-      >
-        {/* Bio panel tab bar */}
-        <div style={{ display: "flex", alignItems: "center", flexShrink: 0, background: "var(--bg-panel)", borderBottom: "1px solid var(--border)", height: 36, overflow: "hidden" }}>
-          <div style={{ display: "flex", flex: 1, overflowX: "auto", height: "100%" }}>
-            {bioTabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveBioTab(tab.id)}
-                title={tab.label}
-                style={{
-                  display: "flex", alignItems: "center", gap: 4,
-                  height: "100%", padding: "0 10px",
-                  background: activeBioTab === tab.id ? "var(--bg)" : "transparent",
-                  border: "none",
-                  borderBottom: activeBioTab === tab.id ? "2px solid var(--accent)" : "2px solid transparent",
-                  color: activeBioTab === tab.id ? "var(--text)" : "var(--text-muted)",
-                  fontSize: 11, fontWeight: activeBioTab === tab.id ? 600 : 400,
-                  cursor: "pointer", whiteSpace: "nowrap",
-                  transition: "color 0.12s, background 0.12s, border-color 0.12s",
-                  flexShrink: 0,
-                }}
-                onMouseEnter={(e) => { if (activeBioTab !== tab.id) e.currentTarget.style.color = "var(--text)"; }}
-                onMouseLeave={(e) => { if (activeBioTab !== tab.id) e.currentTarget.style.color = "var(--text-muted)"; }}
-              >
-                <span style={{ fontSize: 12 }}>{tab.icon}</span>
-                <span>{tab.label}</span>
-              </button>
-            ))}
-          </div>
-          <button
-            onClick={() => setBioPanelOpen(false)}
-            title={tl("closeBioPanel")}
-            style={{
-              display: "flex", alignItems: "center", justifyContent: "center",
-              width: 28, height: 28, padding: 0, marginRight: 4,
-              background: "none", border: "none", borderRadius: 6,
-              color: "var(--text-muted)", cursor: "pointer", flexShrink: 0,
-              transition: "color 0.12s, background 0.12s",
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = "var(--text)"; e.currentTarget.style.background = "var(--bg-hover)"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-muted)"; e.currentTarget.style.background = "none"; }}
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-          </button>
-        </div>
-
-        {/* Bio panel content */}
-        <div style={{ flex: 1, overflow: "hidden" }}>
-          <div key={activeBioTab} ref={bioPanelContentRef} style={{ height: "100%", overflowY: "auto", padding: 12 }}>
-            {activeBioTab === "thinking" && (
-              <ThinkingPanel sections={displaySections} isThinking={isThinking} />
-            )}
-            {activeBioTab === "progress" && (
-              <>
-                {!showChat && (
-                  <div style={{ textAlign: "center", color: "var(--text-muted)", fontSize: 12, padding: "40px 0" }}>
-                    {tl("startSessionWorkflow")}
-                  </div>
-                )}
-                {showChat && workflowRunId ? (
-                  <ProgressTracker
-                    workflowRunId={workflowRunId}
-                    nodes={workflowNodes}
-                    currentProgress={workflowProgress}
-                    estimatedRemaining={workflowProgress > 0 ? `${Math.ceil((1 - workflowProgress) * 10)} min` : "..."}
-                    onPause={() => {}}
-                    onResume={() => {}}
-                    onAbort={() => {}}
-                  />
-                ) : showChat ? (
-                  <div style={{ textAlign: "center", color: "var(--text-muted)", fontSize: 12, padding: "40px 0" }}>
-                    {tl("sendMsgWorkflow")}
-                  </div>
-                ) : null}
-              </>
-            )}
-            {activeBioTab === "qc" && (
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {qcReports.length === 0 ? (
-                  <div style={{ textAlign: "center", color: "var(--text-muted)", fontSize: 12, padding: "40px 0" }}>
-                    {tl("qcReportsAppear")}
-                  </div>
-                ) : (
-                  qcReports.map((report, idx) => (
-                    <QCReportCard
-                      key={idx}
-                      skillName={report.skillName}
-                      overall={report.overall}
-                      gates={report.gates}
-                      onApplySuggestion={() => {}}
-                      onIgnoreSuggestion={() => {}}
-                      onCustomThreshold={() => {}}
-                    />
-                  ))
-                )}
-              </div>
-            )}
-            {activeBioTab === "viz" && (
-              <VizPanel
-                visualizations={visualizations}
-                isLoading={false}
-                error={null}
-              />
-            )}
-            {activeBioTab === "knowledge" && (
-              <KnowledgeRef
-                references={knowledgeRefs}
-                answer={knowledgeAnswer || undefined}
-                isLoading={knowledgeLoading}
-                error={knowledgeError}
-              />
-            )}
-          </div>
-        </div>
-      </div>
-
       {/* Right panel: file viewer — always mounted, width animated via CSS */}
       <div
         ref={rightPanelRef}
@@ -968,25 +680,6 @@ export function AppShell() {
         </div>
       </div>
     </div>
-    {/* Bio panel toggle — positioned to the left of file panel toggle */}
-    <button
-      onClick={() => setBioPanelOpen((v) => !v)}
-      title={bioPanelOpen ? tl("hideBioPanel") : tl("showBioPanel")}
-      style={{
-        position: "fixed", top: 0, right: 36, zIndex: 300,
-        display: "flex", alignItems: "center", justifyContent: "center",
-        width: 36, height: 36, padding: 0,
-        background: "var(--bg-panel)", border: "none", borderLeft: "1px solid var(--border)", borderBottom: "1px solid var(--border)",
-        color: bioPanelOpen ? "var(--accent)" : "var(--text-muted)",
-        cursor: "pointer", transition: "color 0.12s",
-      }}
-      onMouseEnter={(e) => { e.currentTarget.style.color = "var(--text)"; }}
-      onMouseLeave={(e) => { e.currentTarget.style.color = bioPanelOpen ? "var(--accent)" : "var(--text-muted)"; }}
-    >
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 20V10" /><path d="M18 20V4" /><path d="M6 20v-4" />
-      </svg>
-    </button>
     {/* File panel toggle — always visible at top-right */}
     <button
       onClick={() => setRightPanelOpen((v) => !v)}

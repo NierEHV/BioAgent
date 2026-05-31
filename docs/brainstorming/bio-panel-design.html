@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BioAgent 生信面板 — 布局方案对比</title>
+<style>
+  :root {
+    --bg:#0d1117; --card:#161b22; --border:#30363d; --text:#e6edf3;
+    --muted:#8b949e; --accent:#58a6ff; --green:#3fb950; --orange:#d29922;
+    --red:#f85149; --purple:#a371f7; --pink:#db61a2;
+    --shadow:0 8px 32px rgba(0,0,0,.4);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg);color:var(--text);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;padding:24px}
+  h1{font-size:26px;margin-bottom:4px}
+  h2{font-size:18px;margin:32px 0 12px;padding-bottom:8px;border-bottom:2px solid var(--border)}
+  h3{font-size:14px;color:var(--accent);margin:16px 0 8px}
+  .subtitle{color:var(--muted);margin-bottom:24px}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+  .grid2-wide{display:grid;grid-template-columns:2fr 1fr;gap:24px}
+
+  .mockup{background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:var(--shadow)}
+  .mockup-topbar{display:flex;align-items:center;gap:8px;padding:0 12px;height:36px;background:#1c2333;border-bottom:1px solid var(--border)}
+  .mockup-topbar .dot{width:10px;height:10px;border-radius:50%}
+  .mockup-topbar .dot.red{background:#ff5f57}
+  .mockup-topbar .dot.yellow{background:#febc2e}
+  .mockup-topbar .dot.green{background:#28c840}
+  .mockup-topbar .title{font-size:11px;color:var(--muted);margin-left:8px}
+  .mockup-body{display:flex;min-height:500px}
+
+  /* Layout components */
+  .sidebar{width:220px;flex-shrink:0;background:#12171f;border-right:1px solid var(--border);padding:8px}
+  .sidebar-item{padding:8px 10px;border-radius:6px;font-size:12px;color:var(--muted);margin-bottom:2px;display:flex;align-items:center;gap:8px}
+  .sidebar-item.active{background:#1c2840;color:var(--text)}
+  .sidebar-item .icon{font-size:14px}
+
+  .main-area{flex:1;display:flex;flex-direction:column;min-width:0}
+  .chat-area{flex:1;display:flex;flex-direction:column;overflow:hidden}
+  .chat-messages{flex:1;overflow-y:auto;padding:16px}
+  .chat-input-area{padding:12px;border-top:1px solid var(--border);display:flex;gap:8px}
+  .chat-input{flex:1;padding:8px 12px;background:#0d1117;border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px}
+
+  /* Message bubbles */
+  .msg{margin-bottom:16px}
+  .msg.user{display:flex;justify-content:flex-end}
+  .msg.user .bubble{background:#1a3a5c;border-radius:12px 12px 4px 12px;padding:10px 14px;max-width:75%;font-size:13px}
+  .msg.assistant .bubble{background:#161b22;border:1px solid var(--border);border-radius:12px 12px 12px 4px;padding:10px 14px;max-width:85%;font-size:13px}
+  .msg-label{font-size:10px;color:var(--muted);margin-bottom:4px;text-transform:uppercase}
+
+  /* Inline bio components */
+  .thinking-block{margin:8px 0;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:#12171f}
+  .thinking-header{display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;font-size:12px;color:var(--purple)}
+  .thinking-header:hover{background:#1c1c28}
+  .thinking-body{padding:0 12px 10px;font-size:12px;color:var(--muted);line-height:1.7;max-height:200px;overflow-y:auto}
+  .thinking-meta{display:flex;gap:12px;font-size:10px;color:var(--muted);margin-top:6px}
+  .thinking-collapsed .thinking-body{display:none}
+
+  .qc-card{margin:8px 0;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+  .qc-card.pass{border-left:3px solid var(--green)}
+  .qc-card.warn{border-left:3px solid var(--orange)}
+  .qc-card.fail{border-left:3px solid var(--red)}
+  .qc-card-header{padding:8px 12px;display:flex;align-items:center;gap:8px;font-size:12px;background:#12171f}
+  .qc-card-body{padding:8px 12px;font-size:11px}
+  .qc-gate{display:flex;align-items:center;gap:6px;padding:4px 0;font-size:11px}
+  .qc-gate .dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+  .qc-gate .dot.pass{background:var(--green)}
+  .qc-gate .dot.warn{background:var(--orange)}
+  .qc-gate .dot.fail{background:var(--red)}
+
+  .progress-card{margin:8px 0;padding:12px;border:1px solid var(--border);border-radius:8px;font-size:12px}
+  .progress-bar{height:4px;background:#21262d;border-radius:2px;margin:8px 0;overflow:hidden}
+  .progress-fill{height:100%;background:var(--accent);border-radius:2px;transition:width .3s}
+  .progress-steps{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+  .progress-step{padding:2px 8px;border-radius:10px;font-size:10px}
+  .progress-step.done{background:#0d2818;color:var(--green)}
+  .progress-step.running{background:#1a2a3a;color:var(--accent)}
+  .progress-step.pending{background:transparent;color:var(--muted);border:1px dashed var(--border)}
+
+  .viz-embed{margin:8px 0;padding:8px;border:1px solid var(--border);border-radius:8px;text-align:center}
+  .viz-embed .placeholder{width:100%;height:200px;background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);border-radius:4px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px;position:relative;overflow:hidden}
+  .viz-embed .placeholder .dots{position:absolute;border-radius:50%}
+  .viz-caption{font-size:10px;color:var(--muted);margin-top:6px}
+
+  .ref-list{margin:8px 0;padding:8px 12px;background:#12171f;border-radius:6px;font-size:11px}
+  .ref-item{display:flex;align-items:center;gap:6px;padding:3px 0;color:var(--muted)}
+
+  /* Right panel version */
+  .bio-panel{width:380px;flex-shrink:0;border-left:1px solid var(--border);display:flex;flex-direction:column;background:var(--bg)}
+  .bio-tabs{display:flex;border-bottom:1px solid var(--border);height:32px;flex-shrink:0}
+  .bio-tab{padding:0 12px;font-size:11px;display:flex;align-items:center;gap:4px;color:var(--muted);border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap}
+  .bio-tab.active{color:var(--text);border-bottom-color:var(--accent);background:var(--bg)}
+  .bio-content{flex:1;overflow-y:auto;padding:12px}
+
+  .badge{display:inline-block;padding:1px 6px;border-radius:8px;font-size:9px;font-weight:700}
+  .badge.pro{background:var(--green);color:#000}
+  .badge.con{background:var(--red);color:#fff}
+  .badge.neutral{background:var(--orange);color:#000}
+
+  .comparison-table{width:100%;border-collapse:collapse;margin:16px 0;font-size:13px}
+  .comparison-table th,.comparison-table td{padding:10px 14px;border:1px solid var(--border);text-align:left}
+  .comparison-table th{background:#21262d;font-weight:600}
+  .comparison-table .win{color:var(--green);font-weight:600}
+  .comparison-table .lose{color:var(--red)}
+
+  .tag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;margin-right:4px}
+  .tag.a{background:#1a3a5c;color:var(--accent)}
+  .tag.b{background:#1a2e1a;color:var(--green)}
+  .tag.c{background:#3a2a1a;color:var(--orange)}
+</style>
+</head>
+<body>
+
+<h1>🔬 BioAgent 生信面板 — 布局方案对比</h1>
+<p class="subtitle">当前固定侧面板 vs 对话流内联</p>
+
+<!-- ====== CURRENT STATE ====== -->
+<h2>方案 A: 当前 — 固定右侧面板 (380px)</h2>
+
+<div class="mockup">
+  <div class="mockup-topbar">
+    <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
+    <span class="title">BioAgent — http://localhost:30141</span>
+  </div>
+  <div class="mockup-body">
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="sidebar-item active"><span class="icon">💬</span> New Session</div>
+      <div class="sidebar-item"><span class="icon">📁</span> project-01</div>
+      <div class="sidebar-item"><span class="icon">📁</span> scrna-lung</div>
+    </div>
+
+    <!-- Chat -->
+    <div class="main-area">
+      <div class="chat-area">
+        <div class="chat-messages">
+          <div class="msg user"><div class="bubble">帮我分析 scRNA-seq 数据，做 QC</div></div>
+          <div class="msg assistant">
+            <div style="font-size:11px;color:var(--accent);margin-bottom:4px">🧠 BioAgent · 思考中...</div>
+            <div class="bubble">
+              <p style="margin-bottom:8px">好的，我来帮你分析。首先用 <code>file_inspect</code> 检查数据格式。</p>
+              <p style="margin-bottom:8px;font-size:12px;color:var(--muted)">📄 检测到: h5ad 格式, 45,000 细胞 × 20,000 基因</p>
+              <p style="margin-bottom:8px">现在通过 <code>docker_exec</code> 执行 QC...</p>
+              <div style="padding:8px;background:#0d1117;border-radius:4px;font-size:11px;font-family:mono;color:var(--green);margin:6px 0">
+                ✅ Exit Code: 0<br>
+                QC: 42,000 cells retained (93.3%)<br>
+                Filter: n_genes>200, pctMT<20
+              </div>
+              <p>QC 完成。详细报告见右侧面板 →</p>
+            </div>
+          </div>
+        </div>
+        <div class="chat-input-area">
+          <input class="chat-input" placeholder="输入消息..." value="下一步做什么？" disabled>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bio Panel (380px, always visible) -->
+    <div class="bio-panel">
+      <div class="bio-tabs">
+        <div class="bio-tab active">🧠 思考</div>
+        <div class="bio-tab">📊 进度</div>
+        <div class="bio-tab" style="color:var(--text)">✅ QC</div>
+        <div class="bio-tab">📈 可视化</div>
+        <div class="bio-tab">📚 知识</div>
+      </div>
+      <div class="bio-content">
+        <!-- QC tab content -->
+        <div style="margin-bottom:14px">
+          <div style="font-size:12px;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:6px">
+            <span style="color:var(--orange)">⚠️</span> scrna-qc — <span style="color:var(--orange)">warn</span>
+          </div>
+          <div class="qc-gate"><span class="dot pass"></span> 基因数分布: median 2,458 genes/cell — pass</div>
+          <div class="qc-gate"><span class="dot pass"></span> UMI计数: median 8,200 UMI/cell — pass</div>
+          <div class="qc-gate"><span class="dot warn"></span> 线粒体比例: 8.2% cells pctMT > 20% — warn</div>
+        </div>
+        <div style="margin-bottom:14px">
+          <div style="font-size:12px;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:6px">
+            <span style="color:var(--green)">✅</span> doublet-detection — <span style="color:var(--green)">pass</span>
+          </div>
+          <div class="qc-gate"><span class="dot pass"></span> 双细胞率: 3.2% — pass</div>
+          <div class="qc-gate"><span class="dot pass"></span> 分数分离度: AUC=0.94 — pass</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="margin-top:16px;display:flex;gap:8px">
+  <span class="badge con">❌ 聊天区被挤压 380px</span>
+  <span class="badge con">❌ QC 结果脱离对话上下文</span>
+  <span class="badge con">❌ 用户需要左右来回看</span>
+</div>
+
+<!-- ====== PROPOSED: INLINE ====== -->
+<h2>方案 B (推荐): 对话流内联 — 所有生信信息嵌入消息</h2>
+
+<div class="mockup">
+  <div class="mockup-topbar">
+    <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
+    <span class="title">BioAgent — http://localhost:30141</span>
+  </div>
+  <div class="mockup-body">
+    <div class="sidebar">
+      <div class="sidebar-item active"><span class="icon">💬</span> New Session</div>
+      <div class="sidebar-item"><span class="icon">📁</span> project-01</div>
+    </div>
+
+    <div class="main-area">
+      <div class="chat-area">
+        <div class="chat-messages">
+          <div class="msg user"><div class="bubble">帮我分析 scRNA-seq 数据，做 QC</div></div>
+
+          <!-- Message: with inline thinking -->
+          <div class="msg assistant">
+            <div class="bubble">
+              <!-- Thinking: inline collapsible -->
+              <div class="thinking-block thinking-collapsed" onclick="this.classList.toggle('thinking-collapsed')">
+                <div class="thinking-header">
+                  <span>🧠</span> 7-Step Thinking
+                  <span style="margin-left:auto;font-size:10px;color:var(--muted)">8.2s · 点击展开</span>
+                </div>
+                <div class="thinking-body">
+                  <div><strong>1. 科学问题还原:</strong> 用户需要对肺部组织 scRNA-seq 数据执行 QC 过滤</div>
+                  <div><strong>2. 数据评估:</strong> 1 个 h5ad 文件, 45,000 细胞, 20 个样本</div>
+                  <div><strong>3. 分析路径:</strong> Scanpy 标准 QC 管线 (推荐) vs Seurat QC</div>
+                  <div><strong>4. 推荐:</strong> Scanpy — 用户已有 h5ad 格式, Python 生态成熟</div>
+                  <div><strong>5. 风险:</strong> 批次效应可能跨样本存在, 线粒体基因阈值需按组织调整</div>
+                  <div><strong>6. 文献:</strong> Luecken & Theis (2019) Mol Syst Biol</div>
+                  <div><strong>7. 验证:</strong> QC 后检查 UMAP 是否按批次分离</div>
+                  <div class="thinking-meta">
+                    <span>⏱ 8.2s thinking</span>
+                    <span>📊 1,842 tokens</span>
+                    <span>💲 $0.003</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Normal text -->
+              <p style="margin-top:8px">好的，我来帮你分析。先检查数据格式。</p>
+
+              <!-- Inline tool call -->
+              <div style="margin:8px 0;padding:6px 10px;background:#0d1117;border-radius:4px;font-size:11px;display:flex;align-items:center;gap:6px">
+                <span style="color:var(--accent)">🔧</span>
+                <code style="color:var(--accent)">file_inspect</code>
+                <span style="color:var(--muted)">→ h5ad, 45K cells × 20K genes</span>
+                <span style="margin-left:auto;font-size:10px;color:var(--muted)">0.3s</span>
+              </div>
+
+              <p style="margin-top:8px">数据确认完毕，执行 QC...</p>
+
+              <!-- Inline QC Report -->
+              <div class="qc-card warn">
+                <div class="qc-card-header">
+                  <span>⚠️</span> scrna-qc — <span style="color:var(--orange)">warn</span>
+                  <span style="margin-left:auto;font-size:10px;color:var(--muted)">QC Report</span>
+                </div>
+                <div class="qc-card-body">
+                  <div class="qc-gate"><span class="dot pass"></span> 基因数: median 2,458/cell ✅</div>
+                  <div class="qc-gate"><span class="dot pass"></span> UMI计数: median 8,200/cell ✅</div>
+                  <div class="qc-gate"><span class="dot warn"></span> 线粒体: 412 cells pctMT>20% ⚠️</div>
+                  <div style="margin-top:6px;font-size:10px;color:var(--orange)">
+                    💡 建议: 将 pctMT 阈值设为 20%，排除 412 个细胞
+                  </div>
+                </div>
+              </div>
+
+              <div class="qc-card pass">
+                <div class="qc-card-header">
+                  <span>✅</span> doublet-detection — <span style="color:var(--green)">pass</span>
+                </div>
+                <div class="qc-card-body">
+                  <div class="qc-gate"><span class="dot pass"></span> 双细胞率: 3.2% ✅</div>
+                  <div class="qc-gate"><span class="dot pass"></span> AUC: 0.94 ✅</div>
+                </div>
+              </div>
+
+              <!-- Inline Progress -->
+              <div class="progress-card">
+                <div style="display:flex;align-items:center;gap:6px">
+                  <span>📊</span> scRNA-seq Pipeline
+                  <span style="margin-left:auto;font-size:10px;color:var(--muted)">3/13 done</span>
+                </div>
+                <div class="progress-bar"><div class="progress-fill" style="width:23%"></div></div>
+                <div class="progress-steps">
+                  <span class="progress-step done">✓ import</span>
+                  <span class="progress-step done">✓ qc</span>
+                  <span class="progress-step done">✓ doublet</span>
+                  <span class="progress-step running">⋯ normalize</span>
+                  <span class="progress-step pending">hvg</span>
+                  <span class="progress-step pending">pca</span>
+                  <span class="progress-step pending">⋯</span>
+                </div>
+              </div>
+
+              <p>QC 完成。数据质量良好, 将继续归一化和后续分析。</p>
+
+              <!-- Knowledge references -->
+              <div class="ref-list">
+                <div style="font-weight:600;margin-bottom:4px;font-size:11px">📚 知识引用</div>
+                <div class="ref-item">📄 Luecken & Theis (2019) — scRNA-seq best practices</div>
+                <div class="ref-item">📖 BioConductor — scater QC vignette</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="chat-input-area">
+          <input class="chat-input" placeholder="输入消息..." value="下一步做什么？" disabled>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="margin-top:16px;display:flex;gap:8px">
+  <span class="badge pro">✅ 聊天区完整宽度</span>
+  <span class="badge pro">✅ 思考过程可折叠在消息上方</span>
+  <span class="badge pro">✅ QC 卡片直接嵌在分析结果旁</span>
+  <span class="badge pro">✅ 进度条在消息流里实时更新</span>
+  <span class="badge pro">✅ 知识引用在消息底部</span>
+</div>
+
+<!-- ====== COMPARISON TABLE ====== -->
+<h2>📊 方案对比</h2>
+
+<table class="comparison-table">
+  <tr><th>维度</th><th>A: 固定侧面板</th><th>B: 对话流内联</th></tr>
+  <tr>
+    <td>屏幕利用率</td>
+    <td class="lose">❌ 聊天区被挤压 380px</td>
+    <td class="win">✅ 聊天区全宽</td>
+  </tr>
+  <tr>
+    <td>信息位置</td>
+    <td class="lose">❌ QC/进度在右侧面板，脱离对话</td>
+    <td class="win">✅ 在对应消息内，上下文清晰</td>
+  </tr>
+  <tr>
+    <td>用户注意力</td>
+    <td class="lose">❌ 需要在聊天和面板间切换</td>
+    <td class="win">✅ 一个滚动流，不需要跳转</td>
+  </tr>
+  <tr>
+    <td>实现复杂度</td>
+    <td class="win">✅ 已完成 (无需改动)</td>
+    <td class="win">✅ 低 — MessageView 已有 content block 渲染，只需要加 bio block 类型</td>
+  </tr>
+  <tr>
+    <td>消息持久性</td>
+    <td class="lose">❌ 面板刷新后状态丢失</td>
+    <td class="win">✅ 随消息历史持久保存</td>
+  </tr>
+  <tr>
+    <td>可分享性</td>
+    <td class="lose">❌ 导出对话时丢失面板内容</td>
+    <td class="win">✅ 导出包含完整分析过程</td>
+  </tr>
+</table>
+
+<!-- ====== IMPLEMENTATION ====== -->
+<h2>🔧 实现路径 (方案 B)</h2>
+
+<table class="comparison-table">
+  <tr><th>步骤</th><th>改什么</th><th>效果</th></tr>
+  <tr>
+    <td><span class="tag a">1</span></td>
+    <td><code>types.ts</code> — 新增 <code>BioContentBlock</code> 类型 (QcReport, ProgressUpdate, KnowledgeRef, VizData)</td>
+    <td>消息可以携带生信内容块</td>
+  </tr>
+  <tr>
+    <td><span class="tag a">2</span></td>
+    <td><code>MessageView.tsx</code> — 新增 <code>QcReportBlock</code>, <code>ProgressBlock</code>, <code>KnowledgeBlock</code> 渲染组件</td>
+    <td>QC 卡片/进度条/引用直接出现在消息里</td>
+  </tr>
+  <tr>
+    <td><span class="tag a">3</span></td>
+    <td><code>rpc-manager.ts</code> — 增强 afterToolCall hook，将 QC 结果以 inline content block 形式注入</td>
+    <td>每次工具调用后自动生成内联 QC 卡片</td>
+  </tr>
+  <tr>
+    <td><span class="tag a">4</span></td>
+    <td><code>AppShell.tsx</code> — 删除 Bio Panel 及相关代码</td>
+    <td>释放 380px，清理所有 bio panel 代码</td>
+  </tr>
+</table>
+
+<script>
+// Make thinking blocks clickable
+document.querySelectorAll('.thinking-header').forEach(h => {
+  h.addEventListener('click', function(e) {
+    e.stopPropagation();
+    this.parentElement.classList.toggle('thinking-collapsed');
+  });
+});
+</script>
+</body>
+</html>

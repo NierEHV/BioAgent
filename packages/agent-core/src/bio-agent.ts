@@ -144,7 +144,7 @@ export async function bioagentBeforeToolCall(
   return undefined;
 }
 
-/** afterToolCall: QC analysis — parse exit codes, append QC reports */
+/** afterToolCall: QC analysis — parse exit codes, append structured QC reports */
 export async function bioagentAfterToolCall(
   ctx: AfterToolCallContext,
 ): Promise<{ content?: Array<{ type: "text"; text: string }> } | undefined> {
@@ -158,18 +158,51 @@ export async function bioagentAfterToolCall(
     const exitMatch = textOutput.match(/Exit Code:\s*(-?\d+)/);
     if (exitMatch) {
       const exitCode = parseInt(exitMatch[1], 10);
+      const durationMatch = textOutput.match(/Duration:\s*(\d+)ms/);
+      const duration = durationMatch ? `${(parseInt(durationMatch[1]) / 1000).toFixed(1)}s` : "N/A";
+
       if (exitCode !== 0) {
+        const stderrSnippet = textOutput.includes("--- stderr ---")
+          ? textOutput.split("--- stderr ---")[1]?.split("---")[0]?.trim().slice(0, 200) || ""
+          : "";
         return {
           content: [...resultContent as any, {
             type: "text" as const,
-            text: `\n\n--- BioAgent QC Report ---\n❌ Command failed (exit ${exitCode}).\n💡 Check: syntax, input paths, tool availability.`,
+            text: [
+              "",
+              "```qc",
+              JSON.stringify({
+                type: "qc_report",
+                skillName: toolName,
+                overall: "fail",
+                gates: [
+                  { name: "Exit Code", result: "fail", detail: `Command failed with exit code ${exitCode}` },
+                  { name: "Duration", result: "pass", detail: `Executed in ${duration}` },
+                  ...(stderrSnippet ? [{ name: "Stderr", result: "fail" as const, detail: stderrSnippet }] : []),
+                ],
+              }),
+              "```",
+            ].join("\n"),
           }],
         };
       }
       return {
         content: [...resultContent as any, {
           type: "text" as const,
-          text: `\n\n✅ BioAgent QC: Command completed successfully.`,
+          text: [
+            "",
+            "```qc",
+            JSON.stringify({
+              type: "qc_report",
+              skillName: toolName,
+              overall: "pass",
+              gates: [
+                { name: "Exit Code", result: "pass", detail: "Command completed successfully (exit code 0)" },
+                { name: "Duration", result: "pass", detail: `Executed in ${duration}` },
+              ],
+            }),
+            "```",
+          ].join("\n"),
         }],
       };
     }

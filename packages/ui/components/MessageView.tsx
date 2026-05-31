@@ -18,6 +18,10 @@ import type {
   ImageContent,
   ToolCallContent,
   ThinkingContent,
+  QcReportContent,
+  ProgressContent,
+  KnowledgeRefContent,
+  QcGateResult,
 } from "@/lib/types";
 
 interface Props {
@@ -521,7 +525,153 @@ function BlockView({ block, toolResults, isStreaming, streamingDuration, toolCal
     const duration = toolCallDurations?.get(tc.toolCallId);
     return <ToolCallBlock block={tc} result={result} isRunning={isStreaming && !result} duration={duration} />;
   }
+  if (block.type === "qc_report") {
+    return <QcReportBlockView block={block as QcReportContent} />;
+  }
+  if (block.type === "progress") {
+    return <ProgressBlockView block={block as ProgressContent} />;
+  }
+  if (block.type === "knowledge_ref") {
+    return <KnowledgeRefBlockView block={block as KnowledgeRefContent} />;
+  }
   return null;
+}
+
+// ============================================================================
+// BioAgent inline blocks
+// ============================================================================
+
+function QcReportBlockView({ block }: { block: QcReportContent }) {
+  const overallColors: Record<string, string> = {
+    pass: "var(--green)",
+    warn: "var(--orange)",
+    fail: "var(--red)",
+  };
+  const overallIcons: Record<string, string> = {
+    pass: "✅",
+    warn: "⚠️",
+    fail: "❌",
+  };
+
+  return (
+    <div style={{
+      margin: "4px 0",
+      border: "1px solid var(--border)",
+      borderLeft: `3px solid ${overallColors[block.overall] || "var(--border)"}`,
+      borderRadius: 6,
+      overflow: "hidden",
+      background: "var(--bg-panel)",
+      fontSize: 12,
+    }}>
+      <div style={{
+        padding: "6px 10px",
+        display: "flex", alignItems: "center", gap: 6,
+        background: "var(--bg-selected)",
+        fontWeight: 600,
+      }}>
+        <span>{overallIcons[block.overall] || "ℹ️"}</span>
+        <span>{block.skillName}</span>
+        <span style={{ color: overallColors[block.overall] || "var(--muted)", marginLeft: "auto", fontSize: 10 }}>
+          {block.overall.toUpperCase()}
+        </span>
+      </div>
+      <div style={{ padding: "4px 10px 6px" }}>
+        {block.gates.map((gate, i) => (
+          <div key={i} style={{
+            display: "flex", alignItems: "center", gap: 6,
+            padding: "3px 0", fontSize: 11,
+          }}>
+            <span style={{
+              width: 6, height: 6, borderRadius: "50%", flexShrink: 0,
+              background: gate.result === "pass" ? "var(--green)"
+                : gate.result === "warn" ? "var(--orange)" : "var(--red)",
+            }} />
+            <span style={{ flex: 1 }}>{gate.name}: {gate.detail}</span>
+            {gate.suggestion && (
+              <span style={{ fontSize: 10, color: "var(--orange)", cursor: "pointer" }}
+                title={gate.suggestion}>
+                💡
+              </span>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ProgressBlockView({ block }: { block: ProgressContent }) {
+  const completed = block.nodes.filter(n => n.status === "completed").length;
+  const total = block.nodes.length;
+  const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+  const statusColors: Record<string, string> = {
+    completed: "var(--green)",
+    running: "var(--accent)",
+    pending: "var(--border)",
+    failed: "var(--red)",
+    skipped: "var(--orange)",
+  };
+
+  return (
+    <div style={{
+      margin: "4px 0", padding: 10,
+      border: "1px solid var(--border)", borderRadius: 6,
+      background: "var(--bg-panel)", fontSize: 12,
+    }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+        <span>📊</span>
+        <span style={{ fontWeight: 600 }}>{block.workflowName || "Pipeline"}</span>
+        <span style={{ marginLeft: "auto", fontSize: 10, color: "var(--muted)" }}>
+          {completed}/{total} done ({pct}%)
+        </span>
+      </div>
+      <div style={{ height: 4, background: "var(--bg-selected)", borderRadius: 2, overflow: "hidden" }}>
+        <div style={{
+          height: "100%", width: `${pct}%`,
+          background: pct === 100 ? "var(--green)" : "var(--accent)",
+          borderRadius: 2,
+          transition: "width 0.5s ease",
+        }} />
+      </div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 3, marginTop: 6 }}>
+        {block.nodes.slice(0, 12).map((n, i) => (
+          <span key={i} style={{
+            padding: "1px 6px", borderRadius: 8, fontSize: 10,
+            background: n.status === "completed" ? "var(--green)" + "22"
+              : n.status === "running" ? "var(--accent)" + "22"
+              : n.status === "failed" ? "var(--red)" + "22"
+              : "transparent",
+            border: `1px solid ${statusColors[n.status] || "var(--border)"}`,
+            color: statusColors[n.status] || "var(--muted)",
+          }}>
+            {n.status === "completed" ? "✓ " : n.status === "running" ? "⋯ " : n.status === "failed" ? "✗ " : ""}
+            {n.skill}
+          </span>
+        ))}
+        {block.nodes.length > 12 && (
+          <span style={{ fontSize: 10, color: "var(--muted)" }}>+{block.nodes.length - 12} more</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function KnowledgeRefBlockView({ block }: { block: KnowledgeRefContent }) {
+  return (
+    <div style={{
+      margin: "4px 0", padding: "6px 10px",
+      background: "var(--bg-panel)", borderRadius: 6,
+      border: "1px solid var(--border)",
+      fontSize: 11,
+      display: "flex", alignItems: "center", gap: 6,
+    }}>
+      <span>📄</span>
+      <span style={{ fontWeight: 500 }}>{block.title}</span>
+      <span style={{ color: "var(--muted)", flex: 1 }}>{block.snippet.slice(0, 120)}</span>
+      <span style={{ fontSize: 10, color: "var(--text-dim)" }}>{block.source}</span>
+    </div>
+  );
 }
 
 function TextBlock({ block }: { block: TextContent }) {
