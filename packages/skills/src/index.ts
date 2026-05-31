@@ -54,3 +54,28 @@ export { DoubletDetectionSkill } from "./qc/doublet-detection.skill.js";
 // P0 Skills — Preprocess
 // ---------------------------------------------------------------------------
 export { ScrnaNormalizeSkill } from "./preprocess/scrna-normalize.skill.js";
+export { HvgSelectionSkill } from "./preprocess/hvg-selection.skill.js";
+export { ScrnaPCASkill } from "./preprocess/scrna-pca.skill.js";
+export { BatchCorrectionSkill } from "./preprocess/batch-correction.skill.js";
+
+// ---------------------------------------------------------------------------
+// P0 Skills — Embedding
+// ---------------------------------------------------------------------------
+export { UmapTsneSkill } from "./embed/umap-tsne.skill.js";
+
+// ---------------------------------------------------------------------------
+// P0 Skills — Clustering
+// ---------------------------------------------------------------------------
+export { ClusteringSkill } from "./cluster/clustering.skill.js";
+
+// ---------------------------------------------------------------------------
+// P0 Skills — Annotation
+// ---------------------------------------------------------------------------
+export { CellAnnotationSkill } from "./annotate/cell-annotation.skill.js";
+
+// ---------------------------------------------------------------------------
+// P0 Skills — Analysis
+// ---------------------------------------------------------------------------
+export { MarkerDetectionSkill } from "./analysis/marker-detection.skill.js";
+export { DiffExpressionSkill } from "./analysis/diff-expression.skill.js";
+export { FunctionalEnrichmentSkill } from "./analysis/functional-enrichment.skill.js";
