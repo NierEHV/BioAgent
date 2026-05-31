@@ -1,0 +1,31 @@
+{
+  "name": "@bioagent/knowledge",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Three-layer knowledge base — ChromaDB (vector) + KuzuDB (graph) + LLM Wiki (structured docs)",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/",
+    "test": "vitest run",
+    "test:unit": "vitest run",
+    "seed": "tsx src/seed/seed-runner.ts",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "chromadb": "^1.9.0",
+    "@kuzu/kuzu": "latest",
+    "zod": "^3.23.0",
+    "gray-matter": "^4.0.3",
+    "unified": "^11.0.0",
+    "remark-parse": "^11.0.0",
+    "pino": "^9.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "vitest": "^2.0.0",
+    "@types/node": "^22.0.0"
+  }
+}
