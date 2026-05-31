@@ -1,0 +1,180 @@
+openapi: "3.1.0"
+info:
+  title: BioAgent API
+  description: |
+    BioAgent — AI-powered bioinformatics agent API.
+    All bioinformatics tools execute inside Docker containers.
+  version: "0.1.0"
+  contact:
+    name: BioAgent Team
+
+servers:
+  - url: http://localhost:3000/api
+    description: Local development server
+
+paths:
+  /agent:
+    post:
+      summary: Send a message to BioAgent
+      description: Send a natural language message and receive SSE events.
+      operationId: sendMessage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [message]
+              properties:
+                message:
+                  type: string
+                  description: Natural language message
+                sessionId:
+                  type: string
+                  description: Session ID (creates new if omitted)
+                bioagent:
+                  type: boolean
+                  default: false
+                  description: Enable BioAgent bioinformatics mode
+      responses:
+        "200":
+          description: SSE event stream
+          content:
+            text/event-stream:
+              schema:
+                type: string
+
+  /agent/sessions:
+    get:
+      summary: List all sessions
+      operationId: listSessions
+      responses:
+        "200":
+          description: List of sessions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sessions:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/SessionSummary"
+
+  /workflow:
+    post:
+      summary: Start a workflow
+      description: Start an end-to-end bioinformatics analysis workflow.
+      operationId: startWorkflow
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [workflow_name, project_dir]
+              properties:
+                workflow_name:
+                  type: string
+                  enum: [scrna-seq-standard]
+                project_dir:
+                  type: string
+                container:
+                  type: string
+                  description: Docker container name
+                resume:
+                  type: boolean
+                  default: false
+      responses:
+        "202":
+          description: Workflow started
+
+  /workflow/{id}:
+    get:
+      summary: Get workflow status
+      operationId: getWorkflowStatus
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Workflow status
+
+  /knowledge:
+    get:
+      summary: Query the knowledge base
+      operationId: queryKnowledge
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: layers
+          in: query
+          schema:
+            type: string
+            default: "vector,wiki"
+      responses:
+        "200":
+          description: Knowledge base results
+
+  /files:
+    post:
+      summary: Upload a data file
+      operationId: uploadFile
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "201":
+          description: File uploaded
+
+  /files/{path}:
+    get:
+      summary: Get file info or content
+      operationId: inspectFile
+      parameters:
+        - name: path
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: File information or content
+
+  /resources:
+    get:
+      summary: Get host machine resource status
+      operationId: getResources
+      responses:
+        "200":
+          description: Resource report (CPU, RAM, GPU, Disk, Docker)
+
+components:
+  schemas:
+    SessionSummary:
+      type: object
+      properties:
+        sessionId:
+          type: string
+        sessionFile:
+          type: string
+        isStreaming:
+          type: boolean
+        messageCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time

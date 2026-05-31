@@ -1,0 +1,42 @@
+name: Docker Build
+
+on:
+  push:
+    branches: [master, main]
+    paths:
+      - 'docker/**'
+      - 'packages/executor/**'
+  pull_request:
+    branches: [master, main]
+    paths:
+      - 'docker/**'
+      - 'packages/executor/**'
+
+jobs:
+  build-bioagent:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build BioAgent image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/Dockerfile
+          tags: bioagent:latest
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build scRNA-seq tool image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/test-image.Dockerfile
+          tags: bioagent-scrna:latest
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
