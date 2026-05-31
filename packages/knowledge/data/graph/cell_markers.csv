@@ -1,0 +1,19 @@
+cell_type,gene_symbol,specificity
+T cell,CD3E,high
+T cell,CD4,medium
+T cell,CD8A,medium
+B cell,CD19,high
+B cell,MS4A1,high
+NK cell,NCAM1,high
+Monocyte,CD14,high
+Macrophage,CD68,high
+Dendritic cell,ITGAX,high
+Neutrophil,FCGR3B,high
+Erythrocyte,HBB,high
+Platelet,PPBP,high
+Endothelial cell,PECAM1,high
+Epithelial cell,EPCAM,high
+Fibroblast,COL1A1,high
+Neuron,RBFOX3,high
+Astrocyte,GFAP,high
+Oligodendrocyte,MBP,high

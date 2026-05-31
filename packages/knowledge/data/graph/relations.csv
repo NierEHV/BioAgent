@@ -1,0 +1,12 @@
+from_name,to_name,rel_type
+TP53,MAPK signaling pathway,PARTICIPATES_IN
+EGFR,MAPK signaling pathway,PARTICIPATES_IN
+KRAS,MAPK signaling pathway,PARTICIPATES_IN
+TP53,Apoptosis,PARTICIPATES_IN
+TP53,Cell cycle,PARTICIPATES_IN
+PTEN,PI3K-Akt signaling pathway,PARTICIPATES_IN
+EGFR,PI3K-Akt signaling pathway,PARTICIPATES_IN
+KRAS,Pathways in cancer,PARTICIPATES_IN
+MYC,Pathways in cancer,PARTICIPATES_IN
+BRCA1,Pathways in cancer,PARTICIPATES_IN
+TP53,Pathways in cancer,PARTICIPATES_IN
