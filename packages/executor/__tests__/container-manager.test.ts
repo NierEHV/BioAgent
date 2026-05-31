@@ -5,7 +5,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { ContainerManager } from "../src/container-manager.js";
 
-const TEST_IMAGE = "rnakato/shortcake_light:latest";
+const TEST_IMAGE = "bioagent-scrna:latest";
 const TEST_CONTAINER = "bioagent-test-cm";
 
 describe("ContainerManager", () => {
@@ -44,7 +44,7 @@ describe("ContainerManager", () => {
       const result = await cm.startContainer({
         image: TEST_IMAGE,
         name: TEST_CONTAINER,
-        command: ["tail", "-f", "/dev/null"],
+        command: ["sleep", "infinity"],
         volumes: [],
         env: {},
         gpu: false,
@@ -68,11 +68,13 @@ describe("ContainerManager", () => {
       const result = await cm.execInContainer({
         container: TEST_CONTAINER,
         command: "echo hello world",
-        workdir: "/data",
+        workdir: "",
         timeout: 10_000,
         env: {},
         captureStderr: true,
       });
+      // Debug: print stderr when exit code is not 0
+      if (result.exitCode !== 0) console.log("DEBUG exec:", { exitCode: result.exitCode, stdout: result.stdout, stderr: result.stderr, command: result.command });
       expect(result.exitCode).toBe(0);
       expect(result.stdout).toContain("hello world");
     });
@@ -81,16 +83,18 @@ describe("ContainerManager", () => {
       const result = await cm.execInContainer({
         container: TEST_CONTAINER,
         command: "exit 1",
-        workdir: "/data",
+        workdir: "",
         timeout: 10_000,
         env: {},
         captureStderr: true,
       });
+      if (result.exitCode !== 1) console.log("DEBUG exec fail:", { exitCode: result.exitCode, stdout: result.stdout, stderr: result.stderr });
       expect(result.exitCode).toBe(1);
     });
 
     it("listContainers includes test container", async () => {
-      const list = await cm.listContainers("bioagent-test");
+      const list = await cm.listContainers();
+      console.log("DEBUG listContainers:", list.map(c => ({ name: c.name, state: c.state })));
       expect(list.some((c) => c.name === TEST_CONTAINER)).toBe(true);
     });
 

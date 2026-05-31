@@ -15,4 +15,4 @@ RUN python -c "import scanpy; print('scanpy', scanpy.__version__)" && \
     python -c "import anndata; print('anndata', anndata.__version__)" && \
     python -c "import scrublet; print('scrublet OK')"
 
-CMD ["tail", "-f", "/dev/null"]
+CMD ["sleep", "infinity"]

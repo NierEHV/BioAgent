@@ -279,13 +279,15 @@ export class ContainerManager {
 
     const envArray = Object.entries(config.env).map(([k, v]) => `${k}=${v}`);
 
-    const exec = await container.exec({
-      Cmd: ["/bin/sh", "-c", config.command],
+    const execOpts: any = {
+      Cmd: ["sh", "-c", config.command],
       AttachStdout: true,
       AttachStderr: config.captureStderr,
-      WorkingDir: config.workdir || undefined,
-      Env: envArray.length > 0 ? envArray : undefined,
-    });
+    };
+    if (config.workdir) execOpts.WorkingDir = config.workdir;
+    if (envArray.length > 0) execOpts.Env = envArray;
+
+    const exec = await container.exec(execOpts);
 
     const startTime = Date.now();
 
