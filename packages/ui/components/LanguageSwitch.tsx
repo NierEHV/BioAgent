@@ -87,18 +87,14 @@ export default function LanguageSwitch() {
           padding: 2px 4px;
           height: 28px;
           border-radius: 8px;
-          border: 1px solid var(--border, #e5e7eb);
-          background: var(--bg-secondary, #f3f4f6);
+          border: 1px solid var(--border);
+          background: var(--bg-panel);
           cursor: pointer;
           flex-shrink: 0;
           will-change: transform;
         }
-        .dark .language-switch {
-          border-color: var(--border, #374151);
-          background: var(--bg-secondary, #1f2937);
-        }
         .language-switch:hover {
-          border-color: var(--accent, #6366f1);
+          border-color: var(--accent);
         }
         .lang-label {
           display: inline-flex;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
@@ -31,7 +31,7 @@ export function AppShell() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { isDark, toggleTheme } = useTheme();
-  const { lang, t } = useLanguage();
+  const { lang, t: tl } = useLanguage();
   const [selectedSession, setSelectedSession] = useState<SessionInfo | null>(null);
   // When user clicks +, we only store the cwd — no fake session id
   const [newSessionCwd, setNewSessionCwd] = useState<string | null>(null);
@@ -52,15 +52,18 @@ export function AppShell() {
   const [activeBioTab, setActiveBioTab] = useState<"thinking" | "progress" | "qc" | "viz" | "knowledge" | "resources">("thinking");
 
   // Bioagent data — in production these come from SSE events / API
-  const [thinkingSections, setThinkingSections] = useState<ThinkingSection[]>([
-    { index: 1, title: "科学问题还原", content: "用户想从scRNA-seq数据中鉴定肿瘤微环境中的免疫抑制亚群", completed: true, isLoading: false },
-    { index: 2, title: "数据充分性评估", content: "检测到20个样本，45,000个细胞，格式为10x h5", completed: true, isLoading: false },
-    { index: 3, title: "分析路径枚举", content: "方案A: Seurat标准流程 (推荐)\n方案B: Scanpy + Harmony批次校正", completed: true, isLoading: false },
-    { index: 4, title: "最优路径推荐", content: "推荐方案A，理由: 样本量充足，Seurat在免疫细胞注释上有成熟的参考数据集", completed: true, isLoading: false },
-    { index: 5, title: "关键风险点", content: "⚠️ 检测到2个批次，可能存在批次效应\n⚠️ 8%细胞线粒体比例偏高", completed: true, isLoading: false },
-    { index: 6, title: "文献支撑", content: "Luecken & Theis (2019) 单细胞最佳实践\nHeumos et al. (2023) 跨模态分析指南", completed: true, isLoading: false },
-    { index: 7, title: "验证策略", content: "内部: 交叉验证 + 置换检验\n外部: 与TCGA肺腺癌数据对比\n实验: 建议FACS验证关键marker", completed: true, isLoading: false },
-  ]);
+  const [thinkingSections, setThinkingSections] = useState<ThinkingSection[]>([]);
+  // Compute demo thinking sections based on current language
+  const demoSections: ThinkingSection[] = useMemo(() => [
+    { index: 1, title: lang === "zh" ? "科学问题还原" : "Scientific Question", content: lang === "zh" ? "用户想从scRNA-seq数据中鉴定肿瘤微环境中的免疫抑制亚群" : "Identify immunosuppressive subpopulations in the tumor microenvironment from scRNA-seq data", completed: true, isLoading: false },
+    { index: 2, title: lang === "zh" ? "数据充分性评估" : "Data Sufficiency", content: lang === "zh" ? "检测到20个样本，45,000个细胞，格式为10x h5" : "Detected 20 samples, 45,000 cells, 10x h5 format", completed: true, isLoading: false },
+    { index: 3, title: lang === "zh" ? "分析路径枚举" : "Analysis Paths", content: lang === "zh" ? "方案A: Seurat标准流程 (推荐)\n方案B: Scanpy + Harmony批次校正" : "Option A: Seurat standard pipeline (recommended)\nOption B: Scanpy + Harmony batch correction", completed: true, isLoading: false },
+    { index: 4, title: lang === "zh" ? "最优路径推荐" : "Recommendation", content: lang === "zh" ? "推荐方案A，理由: 样本量充足，Seurat在免疫细胞注释上有成熟的参考数据集" : "Recommend Option A: sufficient sample size, mature reference datasets for immune cell annotation in Seurat", completed: true, isLoading: false },
+    { index: 5, title: lang === "zh" ? "关键风险点" : "Key Risks", content: lang === "zh" ? "检测到2个批次，可能存在批次效应\n8%细胞线粒体比例偏高" : "2 batches detected, possible batch effects\n8% cells have elevated mitochondrial ratio", completed: true, isLoading: false },
+    { index: 6, title: lang === "zh" ? "文献支撑" : "Literature", content: lang === "zh" ? "Luecken & Theis (2019) 单细胞最佳实践\nHeumos et al. (2023) 跨模态分析指南" : "Luecken & Theis (2019) scRNA best practices\nHeumos et al. (2023) cross-modality analysis guide", completed: true, isLoading: false },
+    { index: 7, title: lang === "zh" ? "验证策略" : "Validation", content: lang === "zh" ? "内部: 交叉验证 + 置换检验\n外部: 与TCGA肺腺癌数据对比\n实验: 建议FACS验证关键marker" : "Internal: cross-validation + permutation test\nExternal: compare with TCGA lung adenocarcinoma\nExperimental: FACS validation of key markers", completed: true, isLoading: false },
+  ], [lang]);
+  const displaySections = thinkingSections.length > 0 ? thinkingSections : demoSections;
   const [isThinking, setIsThinking] = useState(false);
   const [workflowNodes, setWorkflowNodes] = useState<WorkflowNodeState[]>([
     { nodeId: "import", skill: "data-import", status: "completed", startedAt: new Date().toISOString(), endedAt: new Date().toISOString(), retryCount: 0, error: null },
@@ -123,12 +126,12 @@ export function AppShell() {
 
   // Bio-tab definitions
   const bioTabs = [
-    { id: "thinking" as const, label: "Thinking", icon: "🧠" },
-    { id: "progress" as const, label: "Progress", icon: "📊" },
-    { id: "qc" as const, label: "QC", icon: "✅" },
-    { id: "viz" as const, label: "Viz", icon: "📈" },
-    { id: "knowledge" as const, label: "Knowledge", icon: "📚" },
-    { id: "resources" as const, label: "Resources", icon: "🖥️" },
+    { id: "thinking" as const, label: tl("tabThinking"), icon: "🧠" },
+    { id: "progress" as const, label: tl("tabProgress"), icon: "📊" },
+    { id: "qc" as const, label: tl("tabQC"), icon: "✅" },
+    { id: "viz" as const, label: tl("tabViz"), icon: "📈" },
+    { id: "knowledge" as const, label: tl("tabKnowledge"), icon: "📚" },
+    { id: "resources" as const, label: tl("tabResources"), icon: "🖥️" },
   ];
 
   // Branch navigator state — populated by ChatWindow via onBranchDataChange
@@ -851,7 +854,7 @@ export function AppShell() {
         <div style={{ flex: 1, overflow: "hidden" }}>
           <div key={activeBioTab} ref={bioPanelContentRef} style={{ height: "100%", overflowY: "auto", padding: 12 }}>
             {activeBioTab === "thinking" && (
-              <ThinkingPanel sections={thinkingSections} isThinking={isThinking} />
+              <ThinkingPanel sections={displaySections} isThinking={isThinking} />
             )}
             {activeBioTab === "progress" && (
               <>
