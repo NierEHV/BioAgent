@@ -338,15 +338,29 @@ export async function startRpcSession(
     if (bioagent) {
       const session = inner as any;
 
-      // CRITICAL: pi's _rebuildSystemPrompt() generates "You are an expert coding
-      // assistant operating inside pi..." and overwrites state.systemPrompt.
-      // We must intercept _baseSystemPromptOptions.customPrompt so future rebuilds
-      // (e.g. on tool change) use BioAgent's prompt instead of pi's default.
-      if (session._baseSystemPromptOptions) {
-        session._baseSystemPromptOptions.customPrompt = BIOAGENT_SYSTEM_PROMPT;
+      // CRITICAL: Monkey-patch pi's _rebuildSystemPrompt().
+      // pi generates "You are an expert coding assistant operating inside pi..."
+      // as its base identity. customPrompt is only APPENDED — the agent sees
+      // BOTH identities and defaults to calling itself "pi".
+      // Fix: replace the entire method so it returns BioAgent-only prompt.
+      if (typeof session._rebuildSystemPrompt === "function") {
+        session._rebuildSystemPrompt = (_toolNames: string[]) => {
+          const allTools = inner.getAllTools();
+          const activeSet = new Set(_toolNames);
+          const toolLines: string[] = [];
+          for (const t of allTools) {
+            if (activeSet.has(t.name)) {
+              toolLines.push(`- **${t.name}** — ${t.description || ""}`);
+            }
+          }
+          const toolsSection = toolLines.length > 0
+            ? `\n\n## Available Tools\n\n${toolLines.join("\n")}`
+            : "";
+          return BIOAGENT_SYSTEM_PROMPT + toolsSection;
+        };
       }
 
-      // Force immediate rebuild with BioAgent prompt
+      // Force immediate rebuild with BioAgent-only prompt
       if (typeof session._rebuildSystemPrompt === "function") {
         const activeTools = inner.getActiveToolNames();
         session._baseSystemPrompt = session._rebuildSystemPrompt(activeTools);
