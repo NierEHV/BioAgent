@@ -239,6 +239,13 @@ export function AppShell() {
       setSystemPrompt(null);
       setActiveTopPanel(null);
       router.replace("/", { scroll: false });
+
+      // BioAgent: auto-initialize as bioinformatics project directory
+      fetch("/api/projects/init", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path: cwd }),
+      }).catch(() => { /* silent — non-blocking */ });
     }
   }, [selectedSession, router]);
 

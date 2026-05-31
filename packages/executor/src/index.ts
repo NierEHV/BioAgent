@@ -70,5 +70,11 @@ export type {
   ResourceReport,
 } from "./resource-probe.types";
 
+// ---------------------------------------------------------------------------
+// Project Initializer (§4.1: auto-initialize bioinformatics project dirs)
+// ---------------------------------------------------------------------------
+export { ensureProjectDir, isProjectDir } from "./project-initializer";
+export type { ProjectInitResult } from "./project-initializer";
+
 // Backward-compat barrel re-exports
 export type * from "./types";
