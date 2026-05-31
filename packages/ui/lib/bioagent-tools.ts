@@ -20,14 +20,10 @@ import type {
 import { Type, type TSchema } from "@sinclair/typebox";
 
 // ============================================================================
-// Backend imports — all server-side, excluded from client bundle
+// Backend imports — ALL DYNAMIC to avoid native module crashes (kuzu, dockerode)
+// Each tool handler lazily imports only the backend package it needs.
 // ============================================================================
-import { ContainerManager, ImageSearchService, daysAgo } from "@bioagent/executor";
 import type { SearchParams, SearchResult } from "@bioagent/executor";
-import { WikiLoader } from "@bioagent/knowledge";
-import { SkillRegistry } from "@bioagent/skills";
-import { WorkflowRegistry, SCRNA_SEQ_STANDARD } from "@bioagent/workflow";
-import { resolve, join } from "node:path";
 
 // ============================================================================
 // Helper: simplified tool factory
@@ -74,12 +70,15 @@ function createSimpleTool<TParams>(
 }
 
 // ============================================================================
-// Shared ContainerManager singleton
+// Shared ContainerManager singleton (lazy)
 // ============================================================================
 
-let _cm: ContainerManager | null = null;
-function getContainerManager(): ContainerManager {
-  if (!_cm) _cm = new ContainerManager();
+let _cm: any = null;
+async function getContainerManager(): Promise<any> {
+  if (!_cm) {
+    const { ContainerManager } = await import("@bioagent/executor");
+    _cm = new ContainerManager();
+  }
   return _cm;
 }
 
@@ -99,7 +98,7 @@ Use for ALL bioinformatics tools — never run bio tools directly on the host.`,
     "Mount data to /data and write outputs to /data/output.",
   ],
   async execute(params: any): Promise<string> {
-    const cm = getContainerManager();
+    const cm = await getContainerManager();
     const action = params.action as string;
 
     switch (action) {
@@ -162,7 +161,7 @@ Use for ALL bioinformatics tools — never run bio tools directly on the host.`,
       case "list_containers": {
         const containers = await cm.listContainers((params as any).filter);
         if (containers.length === 0) return "No containers found.";
-        return containers.map((c) => `${c.name}  ${c.state}  ${c.imageUsed}`).join("\n");
+        return containers.map((c: any) => `${c.name}  ${c.state}  ${c.imageUsed}`).join("\n");
       }
 
       default:
@@ -185,6 +184,7 @@ export const dockerSearchTool = createSimpleTool({
     "Prefer ShortCake (rnakato/shortcake) for full single-cell analysis.",
   ],
   async execute(params: any): Promise<string> {
+    const { ImageSearchService, daysAgo } = await import("@bioagent/executor");
     const searcher = new ImageSearchService();
     const searchParams: SearchParams = {
       query: params.query as string,
@@ -225,7 +225,9 @@ export const bioKbQueryTool = createSimpleTool({
     const question = params.question as string;
 
     // Use WikiLoader for local search (always works)
+    const { resolve, join } = await import("node:path");
     const wikiPath = resolve(join(process.cwd(), "..", "knowledge", "data", "wiki"));
+    const { WikiLoader } = await import("@bioagent/knowledge");
     const loader = new WikiLoader(wikiPath);
     await loader.loadIndex();
     const wikiDocs = loader.search(question);
@@ -348,6 +350,7 @@ print(f'QC: {adata.n_obs} cells retained')
 
     // For skills without predefined scripts, query the registry
     try {
+      const { SkillRegistry } = await import("@bioagent/skills");
       const registry = new SkillRegistry();
       const skill = registry.get(skillName);
       if (skill) {
@@ -406,6 +409,7 @@ Available workflows: scrna-seq-standard (13 Skills: import → qc → doublet �
       const container = (params.container as string) || "bioagent-scrna";
 
       // Register workflows
+      const { WorkflowRegistry, SCRNA_SEQ_STANDARD } = await import("@bioagent/workflow");
       const registry = new WorkflowRegistry();
       registry.register(SCRNA_SEQ_STANDARD);
 

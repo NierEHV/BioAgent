@@ -20,7 +20,7 @@ export async function GET(
     }
     const cwd = SessionManager.open(filePath).getHeader()?.cwd ?? process.cwd();
     try {
-      ({ session } = await startRpcSession(id, filePath, cwd));
+      ({ session } = await startRpcSession(id, filePath, cwd, undefined, true));
     } catch (error) {
       return new Response(`Failed to start agent: ${error}`, { status: 500 });
     }
