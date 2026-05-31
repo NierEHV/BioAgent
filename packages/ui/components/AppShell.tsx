@@ -45,20 +45,73 @@ export function AppShell() {
   // ---------------------------------------------------------------------------
   // BioAgent — right-side bioinformatics panel state
   // ---------------------------------------------------------------------------
-  const [bioPanelOpen, setBioPanelOpen] = useState(false);
+  const [bioPanelOpen, setBioPanelOpen] = useState(true);
   const [activeBioTab, setActiveBioTab] = useState<"thinking" | "progress" | "qc" | "viz" | "knowledge" | "resources">("thinking");
 
-  // Mock bioagent data — in production these come from SSE events / API
-  const [thinkingSections, setThinkingSections] = useState<ThinkingSection[]>([]);
+  // Bioagent data — in production these come from SSE events / API
+  const [thinkingSections, setThinkingSections] = useState<ThinkingSection[]>([
+    { index: 1, title: "科学问题还原", content: "用户想从scRNA-seq数据中鉴定肿瘤微环境中的免疫抑制亚群", completed: true, isLoading: false },
+    { index: 2, title: "数据充分性评估", content: "检测到20个样本，45,000个细胞，格式为10x h5", completed: true, isLoading: false },
+    { index: 3, title: "分析路径枚举", content: "方案A: Seurat标准流程 (推荐)\n方案B: Scanpy + Harmony批次校正", completed: true, isLoading: false },
+    { index: 4, title: "最优路径推荐", content: "推荐方案A，理由: 样本量充足，Seurat在免疫细胞注释上有成熟的参考数据集", completed: true, isLoading: false },
+    { index: 5, title: "关键风险点", content: "⚠️ 检测到2个批次，可能存在批次效应\n⚠️ 8%细胞线粒体比例偏高", completed: true, isLoading: false },
+    { index: 6, title: "文献支撑", content: "Luecken & Theis (2019) 单细胞最佳实践\nHeumos et al. (2023) 跨模态分析指南", completed: true, isLoading: false },
+    { index: 7, title: "验证策略", content: "内部: 交叉验证 + 置换检验\n外部: 与TCGA肺腺癌数据对比\n实验: 建议FACS验证关键marker", completed: true, isLoading: false },
+  ]);
   const [isThinking, setIsThinking] = useState(false);
-  const [workflowNodes, setWorkflowNodes] = useState<WorkflowNodeState[]>([]);
-  const [workflowProgress, setWorkflowProgress] = useState(0);
-  const [workflowRunId, setWorkflowRunId] = useState<string>("");
-  const [qcReports, setQcReports] = useState<Array<{ skillName: string; overall: "pass" | "warn" | "fail"; gates: QCGateData[] }>>([]);
-  const [visualizations, setVisualizations] = useState<Array<{ type: "umap" | "volcano" | "heatmap" | "dotplot" | "violin"; url: string; metadata: Record<string, unknown> }>>([]);
-  const [knowledgeRefs, setKnowledgeRefs] = useState<KnowledgeReference[]>([]);
-  const [knowledgeAnswer, setKnowledgeAnswer] = useState<string>("");
-  const [resources, setResources] = useState<ResourceStatus | null>(null);
+  const [workflowNodes, setWorkflowNodes] = useState<WorkflowNodeState[]>([
+    { nodeId: "import", skill: "data-import", status: "completed", startedAt: new Date().toISOString(), endedAt: new Date().toISOString(), retryCount: 0, error: null },
+    { nodeId: "qc", skill: "scrna-qc", status: "completed", startedAt: new Date().toISOString(), endedAt: new Date().toISOString(), retryCount: 0, error: null },
+    { nodeId: "doublet", skill: "doublet-detection", status: "completed", startedAt: new Date().toISOString(), endedAt: new Date().toISOString(), retryCount: 0, error: null },
+    { nodeId: "normalize", skill: "scrna-normalize", status: "running", startedAt: new Date().toISOString(), endedAt: null, retryCount: 0, error: null },
+    { nodeId: "hvg", skill: "hvg-selection", status: "pending", startedAt: null, endedAt: null, retryCount: 0, error: null },
+    { nodeId: "pca", skill: "scrna-pca", status: "pending", startedAt: null, endedAt: null, retryCount: 0, error: null },
+    { nodeId: "umap", skill: "umap-tsne", status: "pending", startedAt: null, endedAt: null, retryCount: 0, error: null },
+    { nodeId: "cluster", skill: "clustering", status: "pending", startedAt: null, endedAt: null, retryCount: 0, error: null },
+    { nodeId: "annotate", skill: "cell-annotation", status: "pending", startedAt: null, endedAt: null, retryCount: 0, error: null },
+    { nodeId: "marker", skill: "marker-detection", status: "pending", startedAt: null, endedAt: null, retryCount: 0, error: null },
+    { nodeId: "de", skill: "diff-expression", status: "pending", startedAt: null, endedAt: null, retryCount: 0, error: null },
+    { nodeId: "enrich", skill: "functional-enrichment", status: "pending", startedAt: null, endedAt: null, retryCount: 0, error: null },
+  ]);
+  const [workflowProgress, setWorkflowProgress] = useState(0.25);
+  const [workflowRunId, setWorkflowRunId] = useState<string>("demo-run-001");
+  const [qcReports, setQcReports] = useState<Array<{ skillName: string; overall: "pass" | "warn" | "fail"; gates: QCGateData[] }>>([
+    {
+      skillName: "scrna-qc",
+      overall: "warn",
+      gates: [
+        { id: "gene_count", name: "基因数分布", result: "pass", detail: "median: 2,458 genes/cell, IQR: 1,200-3,800", canAutoFix: false },
+        { id: "umi_count", name: "UMI计数", result: "pass", detail: "median: 8,200 UMI/cell, 分布正常", canAutoFix: false },
+        { id: "mito_ratio", name: "线粒体比例", result: "warn", detail: "8.2% 细胞 pctMT > 20%, 建议设阈值20%排除412个细胞", suggestion: "将阈值设为 20%", canAutoFix: true },
+      ],
+    },
+    {
+      skillName: "doublet-detection",
+      overall: "pass",
+      gates: [
+        { id: "doublet_rate", name: "双细胞率", result: "pass", detail: "检出 3.2% 双细胞，在正常范围内 (<15%)", canAutoFix: false },
+        { id: "score_sep", name: "分数分离度", result: "pass", detail: "双细胞/单细胞分数分离良好 (AUC=0.94)", canAutoFix: false },
+      ],
+    },
+  ]);
+  const [visualizations, setVisualizations] = useState<Array<{ type: "umap" | "volcano" | "heatmap" | "dotplot" | "violin"; url: string; metadata: Record<string, unknown> }>>([
+    { type: "umap", url: "", metadata: { description: "UMAP embedding — 12 clusters identified", cells: 45000 } },
+    { type: "volcano", url: "", metadata: { description: "Tumor vs Normal — 342 upregulated, 198 downregulated" } },
+  ]);
+  const [knowledgeRefs, setKnowledgeRefs] = useState<KnowledgeReference[]>([
+    { title: "单细胞QC最佳实践", type: "paper", doi: "10.15252/msb.20188746", relevance: 0.95 },
+    { title: "肺癌→免疫亚群 Marker 关系", type: "database", url: "http://bio-bigdata.hrbmu.edu.cn/CellMarker/", relevance: 0.89 },
+    { title: "肺癌TME免疫抑制亚群鉴定", type: "paper", doi: "10.1038/s41591-020-0901-8", relevance: 0.87 },
+    { title: "Seurat使用心得与最佳实践", type: "docs", relevance: 0.82 },
+  ]);
+  const [knowledgeAnswer, setKnowledgeAnswer] = useState<string>("肺腺癌肿瘤微环境中常见免疫抑制亚群包括: Treg (FOXP3+), 耗竭T细胞 (PD-1+TOX+), MDSC-like巨噬细胞, 耐受性DC。");
+  const [resources, setResources] = useState<ResourceStatus | null>({
+    cpu: { usage: 34, cores: 16 },
+    memory: { usedBytes: 12.4e9, totalBytes: 32e9, usagePercent: 38.75 },
+    disk: { usedBytes: 45e9, totalBytes: 200e9, usagePercent: 22.5 },
+    containers: { running: 1, total: 1 },
+    hostname: "bioagent-workstation",
+  });
 
   // Refs for GSAP panel animations
   const bioPanelRef = useRef<HTMLDivElement>(null);
