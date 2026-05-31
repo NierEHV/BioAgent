@@ -16,18 +16,18 @@
   },
   "dependencies": {
     "@bioagent/executor": "workspace:*",
-    "@bioagent/skills": "workspace:*",
     "@bioagent/knowledge": "workspace:*",
+    "@bioagent/skills": "workspace:*",
     "@bioagent/workflow": "workspace:*",
-    "@earendil-works/pi-agent-core": "latest",
-    "@earendil-works/pi-ai": "latest",
-    "zod": "^3.23.0",
+    "@earendil-works/pi-agent-core": "^0.78.0",
+    "@earendil-works/pi-ai": "^0.78.0",
+    "gray-matter": "^4.0.3",
     "pino": "^9.0.0",
-    "gray-matter": "^4.0.3"
+    "zod": "^3.23.0"
   },
   "devDependencies": {
+    "@types/node": "^22.0.0",
     "typescript": "^5.5.0",
-    "vitest": "^2.0.0",
-    "@types/node": "^22.0.0"
+    "vitest": "^2.0.0"
   }
 }

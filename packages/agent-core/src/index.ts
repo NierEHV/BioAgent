@@ -26,10 +26,14 @@ export type { ThinkingContext } from "./thinking-engine.js";
 export { THINKING_TEMPLATE, renderTemplate } from "./thinking-template.js";
 
 // ---------------------------------------------------------------------------
-// BioAgent Main Class
+// BioAgent — pi-agent-core based Agent
 // ---------------------------------------------------------------------------
-export { BioAgent } from "./bio-agent.js";
-export type { BioAgentEvent } from "./bio-agent.js";
+export {
+  getBioAgentSystemPrompt,
+  getBioAgentHooks,
+  BIOAGENT_SYSTEM_PROMPT,
+} from "./bio-agent.js";
+
 
 // ---------------------------------------------------------------------------
 // Session Manager

@@ -1,634 +1,180 @@
 // ============================================================
-// @bioagent/agent-core — BioAgent (Main Class)
+// @bioagent/agent-core — BioAgent (基于 pi-agent-core Agent)
 // ============================================================
+// BioAgent 以 pi-agent-core 的 Agent 类为底层框架，在其上注入:
+// - 7 步结构化思考系统提示词
+// - beforeToolCall 安全校验
+// - afterToolCall QC 判定
+//
+// 系统提示词通过 pi 的 customPrompt 机制注入（见 rpc-manager.ts）。
+// Hooks 直接附着于 Agent 实例的属性上。
 
-import type { BioAgentConfig } from "./types.js";
-import { ThinkingEngine } from "./thinking-engine.js";
-import type { ThinkingContext } from "./thinking-engine.js";
-import { SessionManager } from "./session/session-manager.js";
-import type { SessionMessage } from "./session/session-manager.js";
-import { createThinkingHook } from "./hooks/thinking.hook.js";
-import {
-  validateBeforeToolCall,
-} from "./hooks/validation.hook.js";
-import { qcAfterToolCall, type QCResult } from "./hooks/qc.hook.js";
-import { createThinkingSection, createThinkingEnd } from "./messages/thinking.message.js";
-import { createQCReport } from "./messages/qc-report.message.js";
-import type { DockerExecutor } from "@bioagent/executor";
-import type { KnowledgeBridge } from "@bioagent/knowledge";
+import type {
+  BeforeToolCallContext,
+  AfterToolCallContext,
+} from "@earendil-works/pi-agent-core";
 
-// ---------------------------------------------------------------------------
-// BioAgent
-// ---------------------------------------------------------------------------
+// ============================================================================
+// System Prompt
+// ============================================================================
 
-/**
- * BioAgent is the central orchestrator for AI-powered bioinformatics analysis.
- *
- * It ties together:
- * - Docker executor (@bioagent/executor) for containerized tool execution
- * - Knowledge bridge (@bioagent/knowledge) for three-layer knowledge queries
- * - Thinking engine for 7-step structured reasoning
- * - Session manager for conversation persistence
- * - Validation/QC hooks for safety and quality assurance
- *
- * Usage:
- * ```ts
- * const agent = new BioAgent({
- *   config: { model: "...", ... },
- *   dockerExecutor: new DockerExecutor(),
- *   knowledgeBridge: new KnowledgeBridge(),
- * });
- *
- * const sessionId = await agent.createSession("my-project");
- * for await (const event of agent.processMessage(sessionId, "分析 scRNA-seq 数据")) {
- *   console.log(event);
- * }
- * ```
- */
-export class BioAgent {
-  private config: BioAgentConfig;
-  private thinkingEngine: ThinkingEngine;
-  private sessionManager: SessionManager;
-  private dockerExecutor: DockerExecutor;
-  private knowledgeBridge: KnowledgeBridge;
-  private thinkingHook: ReturnType<typeof createThinkingHook>;
+export const BIOAGENT_SYSTEM_PROMPT = `You are BioAgent — an AI Principal Bioinformatician powered by the pi agent framework.
 
-  constructor(params: {
-    config: BioAgentConfig;
-    dockerExecutor: DockerExecutor;
-    knowledgeBridge: KnowledgeBridge;
-  }) {
-    this.config = params.config;
-    this.dockerExecutor = params.dockerExecutor;
-    this.knowledgeBridge = params.knowledgeBridge;
-    this.thinkingEngine = new ThinkingEngine();
-    this.sessionManager = new SessionManager(this.config.sessionDir);
-    this.thinkingHook = createThinkingHook(this.thinkingEngine);
-  }
+## Your Identity
+You have 15 years of experience in bioinformatics. You think like a principal scientist:
+rigorous, first-principles reasoning, collegial but firm on scientific standards.
+Your purpose is to help researchers design, execute, and interpret bioinformatics analyses.
 
-  // -----------------------------------------------------------------------
-  // Session management (delegate to SessionManager)
-  // -----------------------------------------------------------------------
+## Core Workflow: 7-Step Reasoning
+Before executing any analysis, ALWAYS work through this framework:
 
-  /**
-   * Create a new session for the given project.
-   *
-   * @param projectId - Project identifier
-   * @returns New session UUID
-   */
-  async createSession(projectId: string): Promise<string> {
-    return this.sessionManager.create(projectId);
-  }
+### 1. Scientific Question Clarification
+- What is the user's surface request? What is the underlying testable hypothesis?
+- Restate the scientific question in precise, testable terms.
 
-  /**
-   * Get all messages in a session.
-   *
-   * @param sessionId - Session UUID
-   * @returns Ordered array of session messages
-   */
-  async getSession(sessionId: string): Promise<SessionMessage[]> {
-    return this.sessionManager.getMessages(sessionId);
-  }
+### 2. Data Sufficiency Assessment
+- What data does the user have? Format, scale, quality?
+- What data is missing? How does each gap affect conclusions?
+- Can missing data be supplemented from public databases (GEO, TCGA, Human Cell Atlas)?
 
-  /**
-   * Fork a session at the given message index.
-   *
-   * @param sessionId - Original session UUID
-   * @param atMessageIndex - Fork point (inclusive)
-   * @returns New session UUID
-   */
-  async forkSession(sessionId: string, atMessageIndex: number): Promise<string> {
-    return this.sessionManager.fork(sessionId, atMessageIndex);
-  }
+### 3. Analysis Path Enumeration (≥2 approaches)
+- For each path: tools, statistical power, FDR control, resource requirements, interpretability.
+- Compare pros and cons explicitly.
 
-  /**
-   * Compress a session by keeping head 5% and tail 20% of messages.
-   *
-   * @param sessionId - Session UUID
-   */
-  async compressSession(sessionId: string): Promise<void> {
-    return this.sessionManager.compress(sessionId);
-  }
+### 4. Optimal Path Recommendation
+- Recommend the best approach with clear reasons. Cite methodological literature.
+- Specify a fallback if the primary approach fails.
 
-  /**
-   * Delete a session and all its data.
-   *
-   * @param sessionId - Session UUID
-   */
-  async deleteSession(sessionId: string): Promise<void> {
-    return this.sessionManager.delete(sessionId);
-  }
+### 5. Key Risk Assessment
+- Technical risks: batch effects, sequencing depth, doublet rates.
+- Statistical risks: insufficient power, overfitting, multiple testing.
+- Biological risks: tissue heterogeneity, continuous cell states.
 
-  // -----------------------------------------------------------------------
-  // Message processing — async iterable event stream
-  // -----------------------------------------------------------------------
+### 6. Literature Support
+- Reference methods papers, benchmark comparisons.
+- Explicitly note uncertainty where literature support is limited.
 
-  /**
-   * Process a user message and return an async iterable of BioAgent events.
-   *
-   * The event stream includes:
-   * - thinking:*  — structured thinking sections
-   * - tool:*     — tool call lifecycles
-   * - qc:*       — quality control reports
-   * - viz:*      — visualization artifacts
-   * - message:*  — agent response chunks
-   * - knowledge:* — knowledge references
-   * - error:*    — error events
-   *
-   * @param sessionId - Target session UUID
-   * @param message - User's natural language message
-   * @param attachments - Optional file attachments
-   * @returns Async iterable of BioAgent events
-   */
-  async *processMessage(
-    sessionId: string,
-    message: string,
-    attachments?: unknown[],
-  ): AsyncIterable<BioAgentEvent> {
-    // 1. Append user message to session
-    await this.sessionManager.appendMessage(sessionId, {
-      type: "user",
-      content: { text: message, attachments },
-      timestamp: new Date().toISOString(),
-    });
+### 7. Validation Strategy
+- Internal: cross-validation, permutation tests, sensitivity analysis.
+- External: independent datasets, public atlases.
+- Experimental: orthogonal confirmation suggestions.
 
-    // 2. Emit thinking:started
-    yield {
-      type: "thinking:started",
-      sessionId,
-      timestamp: new Date().toISOString(),
-    };
+## Bioinformatics Tools
+- **docker_exec** — Execute commands inside Docker containers. ALWAYS use for bioinformatics tools.
+- **docker_search** — Search Docker Hub for bioinformatics container images.
+- **docker_pull** — Pull Docker images from registries.
+- **docker_inspect** — Inspect Docker image contents and installed tools.
+- **docker_verify** — Verify specific tools are available in an image.
+- **skill_invoke** — Invoke standardized bioinformatics analysis skills with QC gates.
+- **kb_query** — Query the BioAgent knowledge base (best practices, gene-pathway relations).
+- **file_inspect** — Detect bioinformatics file format, dimensions, and structure.
+- **workflow_run** — Start an end-to-end analysis workflow.
 
-    // 3. Probe resources (async, non-blocking)
-    let resourceReport: unknown = undefined;
-    try {
-      resourceReport = await this.dockerExecutor.probeQuick();
-    } catch {
-      // Resource probing is optional
-    }
+## Guidelines
+1. ALWAYS use docker_exec for bioinformatics tools — never install or run them on the host.
+2. Before any analysis, use file_inspect to confirm data format and structure.
+3. Use kb_query to validate methodology against established best practices.
+4. Every analysis step should have explicit QC checks.
+5. Give the analysis outline and rationale BEFORE specific steps.
+6. Be explicit about uncertainty and confidence levels.
+7. Cite specific literature and database sources.
 
-    // 4. Query knowledge base for initial context
-    let knowledgeResult: unknown = undefined;
-    try {
-      knowledgeResult = await this.knowledgeBridge.query({
-        question: message,
-        maxResults: 3,
-      });
-    } catch {
-      // Knowledge query is optional
-    }
+## Image Reference
+- scRNA-seq: rnakato/shortcake_full (100+ tools, R+Python)
+- Individual tools: quay.io/biocontainers/<tool-name>
+- Local lightweight: bioagent-scrna:latest`;
 
-    // 5. Build thinking prompt
-    const thinkingContext: ThinkingContext = {
-      userQuestion: message,
-      resourceReport,
-      knowledgeResult,
-    };
+// ============================================================================
+// Hooks — attached to pi-agent-core Agent instances
+// ============================================================================
 
-    const thinkingPrompt = this.thinkingHook.augmentSystemPrompt(thinkingContext);
+/** beforeToolCall: block dangerous operations, enforce path whitelist, cap timeouts */
+export async function bioagentBeforeToolCall(
+  ctx: BeforeToolCallContext,
+): Promise<{ block?: boolean; reason?: string } | undefined> {
+  const toolName = ctx.toolCall.name;
+  const args = (ctx.args ?? {}) as Record<string, any>;
 
-    // 6. Simulate thinking sections (in real implementation, this would be LLM output)
-    // Here we parse the template itself to generate the section structure
-    const sections = this.thinkingHook.parseOutput(thinkingPrompt);
-    for (const section of sections) {
-      if (section.content) {
-        yield {
-          type: "thinking:section",
-          sessionId,
-          timestamp: new Date().toISOString(),
-          section,
-        };
+  if (toolName === "docker_exec") {
+    const action = args.action as string;
+    if (action === "exec" || !action) {
+      const command: string = (args.command as string) ?? "";
+      if (!command) return undefined;
 
-        // Append thinking section to session
-        await this.sessionManager.appendMessage(sessionId, {
-          type: "thinking",
-          content: createThinkingSection(sessionId, [section]),
-          timestamp: new Date().toISOString(),
-        });
+      const dangerous: Array<{ pattern: RegExp; reason: string }> = [
+        { pattern: /rm\s+-rf\s+\//, reason: "禁止 rm -rf /" },
+        { pattern: /chmod\s+777/, reason: "禁止 chmod 777" },
+        { pattern: />\s*\/dev\/sd[a-z]/, reason: "禁止写入磁盘设备" },
+        { pattern: /mkfs\./, reason: "禁止格式化命令" },
+        { pattern: /curl.*\|.*(?:ba)?sh/, reason: "禁止管道执行远程脚本" },
+      ];
+      for (const d of dangerous) {
+        if (d.pattern.test(command)) {
+          return { block: true, reason: `BioAgent 安全校验: ${d.reason}` };
+        }
+      }
 
+      const blockedPaths = ["/etc", "/root", "/home", "/var", "/sys", "/proc", "/boot", "/dev"];
+      for (const bp of blockedPaths) {
+        if (command.includes(bp) && !command.includes("/data")) {
+          return { block: true, reason: `BioAgent 安全校验: 命令引用了禁止路径 "${bp}"` };
+        }
       }
     }
 
-    // 7. Emit thinking:completed
-    yield {
-      type: "thinking:completed",
-      sessionId,
-      timestamp: new Date().toISOString(),
-      totalSections: sections.filter((s) => s.content).length,
-    };
-
-    await this.sessionManager.appendMessage(sessionId, {
-      type: "thinking",
-      content: createThinkingEnd(sessionId, sections),
-      timestamp: new Date().toISOString(),
-    });
-
-    // 8. Check auto-compress
-    if (this.config.autoCompress) {
-      const messages = await this.sessionManager.getMessages(sessionId);
-      if (messages.length > this.config.maxSessionLength) {
-        await this.sessionManager.compress(sessionId);
-      }
-    }
-
-    // 9. Yield agent acknowledgment
-    yield {
-      type: "message:start",
-      sessionId,
-      timestamp: new Date().toISOString(),
-    };
-
-    yield {
-      type: "message:chunk",
-      sessionId,
-      timestamp: new Date().toISOString(),
-      content: `已按照 7 步思考框架对您的问题进行了系统化分析。请查看思考结果以了解详细的推理过程。`,
-    };
-
-    yield {
-      type: "message:end",
-      sessionId,
-      timestamp: new Date().toISOString(),
-    };
-
-    // Append agent response to session
-    await this.sessionManager.appendMessage(sessionId, {
-      type: "agent",
-      content: {
-        text: "思考过程已完成，共生成 7 个分析步骤。",
-        sectionsCount: sections.filter((s) => s.content).length,
-      },
-      timestamp: new Date().toISOString(),
-    });
-  }
-
-  // -----------------------------------------------------------------------
-  // Tool dispatch — validate, execute, QC
-  // -----------------------------------------------------------------------
-
-  /**
-   * Execute a tool call with full validation / execution / QC pipeline.
-   * Yields events throughout the tool lifecycle (start, progress, end, qc).
-   *
-   * @param toolName - Tool name (must match one of the 9 defined tools)
-   * @param params - Tool parameters
-   * @param sessionId - Session ID for event emission
-   * @yields BioAgent events (tool:start, tool:progress, tool:end, qc:*)
-   * @returns Tool execution result
-   */
-  async *executeTool(
-    toolName: string,
-    params: Record<string, unknown>,
-    sessionId: string,
-  ): AsyncGenerator<BioAgentEvent, unknown, undefined> {
-    // ---- 1. Validation (beforeToolCall) ----
-    const validation = validateBeforeToolCall(
-      toolName,
-      params,
-      this.config.requireConfirmation,
-    );
-
-    if (!validation.allowed) {
-      throw new Error(`Tool call rejected by validation hook: ${validation.reason}`);
-    }
-
-    if (validation.warnings.length > 0) {
-      // Log warnings but proceed
-      for (const warning of validation.warnings) {
-        yield {
-          type: "tool:progress",
-          sessionId,
-          timestamp: new Date().toISOString(),
-          toolName,
-          statusMessage: warning,
-          stage: "initializing",
-        };
-      }
-    }
-
-    if (validation.requiresConfirmation) {
-      // In a real implementation, this would pause and wait for user confirmation
-      yield {
-        type: "tool:progress",
-        sessionId,
-        timestamp: new Date().toISOString(),
-        toolName,
-        statusMessage: "此操作需要用户确认才能继续执行",
-        stage: "queued",
-      };
-    }
-
-    // ---- 2. Execute tool ----
-    yield {
-      type: "tool:start",
-      sessionId,
-      timestamp: new Date().toISOString(),
-      toolName,
-      params: sanitizeParams(params),
-    };
-
-    const startTime = Date.now();
-    let result: unknown;
-    let toolError: Error | undefined;
-
-    try {
-      result = await this.dispatchTool(toolName, params);
-
-      yield {
-        type: "tool:end",
-        sessionId,
-        timestamp: new Date().toISOString(),
-        toolName,
-        duration: Date.now() - startTime,
-        success: true,
-      };
-    } catch (err) {
-      toolError = err instanceof Error ? err : new Error(String(err));
-
-      yield {
-        type: "tool:end",
-        sessionId,
-        timestamp: new Date().toISOString(),
-        toolName,
-        duration: Date.now() - startTime,
-        success: false,
-        error: toolError.message,
-      };
-    }
-
-    // ---- 3. QC (afterToolCall) ----
-    if (result !== undefined) {
-      const qcResult = await qcAfterToolCall(
-        toolName,
-        result,
-        this.knowledgeBridge,
-      );
-
-      // Emit QC events
-      if (!qcResult.passed) {
-        yield {
-          type: "qc:failed",
-          sessionId,
-          timestamp: new Date().toISOString(),
-          toolName,
-          qcResult,
-        };
-      } else if (qcResult.warnings.length > 0) {
-        yield {
-          type: "qc:warning",
-          sessionId,
-          timestamp: new Date().toISOString(),
-          toolName,
-          qcResult,
-        };
-      } else {
-        yield {
-          type: "qc:report",
-          sessionId,
-          timestamp: new Date().toISOString(),
-          toolName,
-          qcResult,
-        };
-      }
-
-      // Append QC report to session
-      await this.sessionManager.appendMessage(sessionId, {
-        type: "qc_report",
-        content: createQCReport(sessionId, toolName, qcResult),
-        timestamp: new Date().toISOString(),
-      });
-    }
-
-    // ---- 4. Append tool call record ----
-    await this.sessionManager.appendMessage(sessionId, {
-      type: "tool_call",
-      content: {
-        toolName,
-        params: sanitizeParams(params),
-        result: toolError ? { error: toolError.message } : result,
-        duration: Date.now() - startTime,
-        success: !toolError,
-      },
-      timestamp: new Date().toISOString(),
-    });
-
-    if (toolError) throw toolError;
-    return result;
-  }
-
-  // -----------------------------------------------------------------------
-  // Configuration
-  // -----------------------------------------------------------------------
-
-  /** Get a copy of the current config. */
-  getConfig(): BioAgentConfig {
-    return { ...this.config };
-  }
-
-  /** Update configuration at runtime. */
-  updateConfig(partial: Partial<BioAgentConfig>): void {
-    this.config = { ...this.config, ...partial };
-  }
-
-  /** Get the underlying Docker executor. */
-  getDockerExecutor(): DockerExecutor {
-    return this.dockerExecutor;
-  }
-
-  /** Get the underlying knowledge bridge. */
-  getKnowledgeBridge(): KnowledgeBridge {
-    return this.knowledgeBridge;
-  }
-
-  /** Get the thinking engine. */
-  getThinkingEngine(): ThinkingEngine {
-    return this.thinkingEngine;
-  }
-
-  /** Get the session manager. */
-  getSessionManager(): SessionManager {
-    return this.sessionManager;
-  }
-
-  // -----------------------------------------------------------------------
-  // Private: tool dispatch
-  // -----------------------------------------------------------------------
-
-  private async dispatchTool(
-    toolName: string,
-    params: Record<string, unknown>,
-  ): Promise<unknown> {
-    // Dynamic import of tool handlers to avoid circular deps
-    switch (toolName) {
-      case "docker_exec": {
-        const { dockerExecHandler } = await import(
-          "./tools/docker-exec.tool.js"
-        );
-        return dockerExecHandler(params as never, this.dockerExecutor);
-      }
-      case "docker_search": {
-        const { dockerSearchHandler } = await import(
-          "./tools/docker-search.tool.js"
-        );
-        return dockerSearchHandler(params as never, this.dockerExecutor);
-      }
-      case "docker_pull": {
-        const { dockerPullHandler } = await import(
-          "./tools/docker-pull.tool.js"
-        );
-        return dockerPullHandler(params as never, this.dockerExecutor);
-      }
-      case "docker_inspect": {
-        const { dockerInspectHandler } = await import(
-          "./tools/docker-inspect.tool.js"
-        );
-        return dockerInspectHandler(params as never, this.dockerExecutor);
-      }
-      case "docker_verify": {
-        const { dockerVerifyHandler } = await import(
-          "./tools/docker-verify.tool.js"
-        );
-        return dockerVerifyHandler(params as never, this.dockerExecutor);
-      }
-      case "skill_invoke": {
-        const { skillInvokeHandler } = await import(
-          "./tools/skill-invoke.tool.js"
-        );
-        return skillInvokeHandler(params as never, this.dockerExecutor);
-      }
-      case "kb_query": {
-        const { kbQueryHandler } = await import(
-          "./tools/kb-query.tool.js"
-        );
-        return kbQueryHandler(params as never, this.knowledgeBridge);
-      }
-      case "file_inspect": {
-        const { fileInspectHandler } = await import(
-          "./tools/file-inspect.tool.js"
-        );
-        return fileInspectHandler(params as never);
-      }
-      case "workflow_run": {
-        const { workflowRunHandler } = await import(
-          "./tools/workflow-run.tool.js"
-        );
-        return workflowRunHandler(params as never);
-      }
-      default:
-        throw new Error(
-          `Unknown tool: "${toolName}". Available tools: docker_exec, docker_search, docker_pull, docker_inspect, docker_verify, skill_invoke, kb_query, file_inspect, workflow_run`,
-        );
+    if ((args.timeout as number) > 3_600_000) {
+      return { block: true, reason: "BioAgent 安全校验: 命令超时不能超过 1 小时" };
     }
   }
+
+  return undefined;
 }
 
-// ---------------------------------------------------------------------------
-// Event types
-// ---------------------------------------------------------------------------
+/** afterToolCall: QC analysis — parse exit codes, append QC reports */
+export async function bioagentAfterToolCall(
+  ctx: AfterToolCallContext,
+): Promise<{ content?: Array<{ type: "text"; text: string }> } | undefined> {
+  if (ctx.isError) return undefined;
 
-/** Union type for all BioAgent events emitted by processMessage and executeTool. */
-export type BioAgentEvent =
-  | { type: "thinking:started"; sessionId: string; timestamp: string }
-  | {
-      type: "thinking:section";
-      sessionId: string;
-      timestamp: string;
-      section: import("./types.js").ThinkingSection;
-    }
-  | {
-      type: "thinking:completed";
-      sessionId: string;
-      timestamp: string;
-      totalSections: number;
-    }
-  | {
-      type: "message:start";
-      sessionId: string;
-      timestamp: string;
-    }
-  | {
-      type: "message:chunk";
-      sessionId: string;
-      timestamp: string;
-      content: string;
-    }
-  | {
-      type: "message:end";
-      sessionId: string;
-      timestamp: string;
-    }
-  | {
-      type: "tool:start";
-      sessionId: string;
-      timestamp: string;
-      toolName: string;
-      params?: Record<string, unknown>;
-    }
-  | {
-      type: "tool:progress";
-      sessionId: string;
-      timestamp: string;
-      toolName: string;
-      statusMessage: string;
-      stage: string;
-    }
-  | {
-      type: "tool:end";
-      sessionId: string;
-      timestamp: string;
-      toolName: string;
-      duration: number;
-      success: boolean;
-      error?: string;
-    }
-  | {
-      type: "qc:report";
-      sessionId: string;
-      timestamp: string;
-      toolName: string;
-      qcResult: QCResult;
-    }
-  | {
-      type: "qc:warning";
-      sessionId: string;
-      timestamp: string;
-      toolName: string;
-      qcResult: QCResult;
-    }
-  | {
-      type: "qc:failed";
-      sessionId: string;
-      timestamp: string;
-      toolName: string;
-      qcResult: QCResult;
-    }
-  | {
-      type: "error";
-      sessionId: string;
-      timestamp: string;
-      error: string;
-      toolName?: string;
-    };
+  const toolName = ctx.toolCall.name;
+  const resultContent = (ctx.result?.content ?? []) as Array<{ type: string; text?: string }>;
+  const textOutput = resultContent.find((c: any) => c.type === "text")?.text ?? "";
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/**
- * Remove sensitive or overly large values from tool params before logging.
- */
-function sanitizeParams(
-  params: Record<string, unknown>,
-): Record<string, unknown> {
-  const sanitized: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(params)) {
-    if (typeof value === "string" && value.length > 500) {
-      sanitized[key] = `${value.slice(0, 500)}... (truncated, total ${value.length} chars)`;
-    } else if (typeof value === "object" && value !== null) {
-      sanitized[key] = "(object)";
-    } else {
-      sanitized[key] = value;
+  if (toolName === "docker_exec") {
+    const exitMatch = textOutput.match(/Exit Code:\s*(-?\d+)/);
+    if (exitMatch) {
+      const exitCode = parseInt(exitMatch[1], 10);
+      if (exitCode !== 0) {
+        return {
+          content: [...resultContent as any, {
+            type: "text" as const,
+            text: `\n\n--- BioAgent QC Report ---\n❌ Command failed (exit ${exitCode}).\n💡 Check: syntax, input paths, tool availability.`,
+          }],
+        };
+      }
+      return {
+        content: [...resultContent as any, {
+          type: "text" as const,
+          text: `\n\n✅ BioAgent QC: Command completed successfully.`,
+        }],
+      };
     }
   }
-  return sanitized;
+
+  return undefined;
+}
+
+// ============================================================================
+// Public API
+// ============================================================================
+
+export function getBioAgentSystemPrompt(): string {
+  return BIOAGENT_SYSTEM_PROMPT;
+}
+
+export function getBioAgentHooks() {
+  return {
+    beforeToolCall: bioagentBeforeToolCall,
+    afterToolCall: bioagentAfterToolCall,
+  };
 }

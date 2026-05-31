@@ -1,8 +1,17 @@
 import { createAgentSession, SessionManager } from "@earendil-works/pi-coding-agent";
 import { cacheSessionPath } from "./session-reader";
 import type { AgentSessionLike, ToolInfo } from "./pi-types";
-import { bioagentTools, BIOAGENT_SYSTEM_PROMPT } from "./bioagent-tools";
-import { bioagentBeforeToolCall, bioagentAfterToolCall, bioagentTransformContext } from "./bioagent-session";
+
+// ============================================================================
+// BioAgent — imports from @bioagent/agent-core (the REAL BioAgent backend)
+// ============================================================================
+import {
+  BIOAGENT_SYSTEM_PROMPT,
+  getBioAgentHooks,
+} from "@bioagent/agent-core";
+
+// Tool definitions — bridge from agent-core zod tools to pi ToolDefinition format
+import { bioagentTools } from "./bioagent-tools";
 
 // ============================================================================
 // Types
@@ -346,12 +355,12 @@ export async function startRpcSession(
       // Direct override — ensure it takes effect immediately
       inner.agent.state.systemPrompt = BIOAGENT_SYSTEM_PROMPT;
 
-      // Inject BioAgent hooks into the pi-agent-core Agent instance
+      // Inject BioAgent hooks from @bioagent/agent-core
+      const bioHooks = getBioAgentHooks();
       const agent = session.agent;
       if (agent) {
-        if (bioagentBeforeToolCall) agent.beforeToolCall = bioagentBeforeToolCall;
-        if (bioagentAfterToolCall) agent.afterToolCall = bioagentAfterToolCall;
-        if (bioagentTransformContext) agent.transformContext = bioagentTransformContext;
+        agent.beforeToolCall = bioHooks.beforeToolCall;
+        agent.afterToolCall = bioHooks.afterToolCall;
       }
     }
 

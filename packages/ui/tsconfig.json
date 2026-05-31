@@ -22,9 +22,12 @@
       }
     ],
     "paths": {
-      "@/*": [
-        "./*"
-      ]
+      "@/*": ["./*"],
+      "@bioagent/agent-core": ["../agent-core/src/index.ts"],
+      "@bioagent/executor": ["../executor/src/index.ts"],
+      "@bioagent/knowledge": ["../knowledge/src/index.ts"],
+      "@bioagent/skills": ["../skills/src/index.ts"],
+      "@bioagent/workflow": ["../workflow/src/index.ts"]
     },
     "target": "ES2017"
   },

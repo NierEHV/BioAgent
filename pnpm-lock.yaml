@@ -23,10 +23,10 @@ importers:
         specifier: workspace:*
         version: link:../workflow
       '@earendil-works/pi-agent-core':
-        specifier: latest
+        specifier: ^0.78.0
         version: 0.78.0(ws@8.21.0)(zod@3.25.76)
       '@earendil-works/pi-ai':
-        specifier: latest
+        specifier: ^0.78.0
         version: 0.78.0(ws@8.21.0)(zod@3.25.76)
       gray-matter:
         specifier: ^4.0.3
