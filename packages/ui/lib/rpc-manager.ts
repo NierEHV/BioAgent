@@ -325,25 +325,34 @@ export async function startRpcSession(
       inner.agent.state.systemPrompt = "";
     }
 
-    // BioAgent: replace system prompt with bioinformatics thinking template as primary
+    // BioAgent: inject bioinformatics identity, tools, hooks
     if (bioagent) {
-      // Use BioAgent's system prompt as the primary prompt
-      // (pi's default coding prompt becomes secondary via agent's buildSystemPrompt)
+      const session = inner as any;
+
+      // CRITICAL: pi's _rebuildSystemPrompt() generates "You are an expert coding
+      // assistant operating inside pi..." and overwrites state.systemPrompt.
+      // We must intercept _baseSystemPromptOptions.customPrompt so future rebuilds
+      // (e.g. on tool change) use BioAgent's prompt instead of pi's default.
+      if (session._baseSystemPromptOptions) {
+        session._baseSystemPromptOptions.customPrompt = BIOAGENT_SYSTEM_PROMPT;
+      }
+
+      // Force immediate rebuild with BioAgent prompt
+      if (typeof session._rebuildSystemPrompt === "function") {
+        const activeTools = inner.getActiveToolNames();
+        session._baseSystemPrompt = session._rebuildSystemPrompt(activeTools);
+      }
+
+      // Direct override — ensure it takes effect immediately
       inner.agent.state.systemPrompt = BIOAGENT_SYSTEM_PROMPT;
 
-      // Inject BioAgent hooks directly into the pi-agent-core Agent instance
-      const agent = (inner as any).agent;
+      // Inject BioAgent hooks into the pi-agent-core Agent instance
+      const agent = session.agent;
       if (agent) {
-        // Safety validation before every tool call
         if (bioagentBeforeToolCall) agent.beforeToolCall = bioagentBeforeToolCall;
-        // QC analysis after every tool call
         if (bioagentAfterToolCall) agent.afterToolCall = bioagentAfterToolCall;
-        // Knowledge base injection before LLM calls
         if (bioagentTransformContext) agent.transformContext = bioagentTransformContext;
       }
-    } else if (bioagent && inner.agent.state.systemPrompt) {
-      // Fallback: append if full replacement not possible
-      inner.agent.state.systemPrompt = (inner.agent.state.systemPrompt || "") + "\n\n" + BIOAGENT_SYSTEM_PROMPT;
     }
 
     const wrapper = new AgentSessionWrapper(inner);
