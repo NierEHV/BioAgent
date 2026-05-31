@@ -76,6 +76,8 @@ export abstract class BaseSkill {
       let status: SkillResult["status"];
       if (qcReport.failed > 0) {
         status = qcReport.overall === "fail" ? "failed" : "partial";
+      } else if (qcReport.warned > 0) {
+        status = "partial";
       } else {
         status = "success";
       }
