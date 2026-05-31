@@ -27,7 +27,7 @@ export async function POST(
 
     const cwd = SessionManager.open(filePath).getHeader()?.cwd ?? process.cwd();
 
-    const { session } = await startRpcSession(id, filePath, cwd);
+    const { session } = await startRpcSession(id, filePath, cwd, undefined, true);
     const result = await session.send(body);
 
     return NextResponse.json({ success: true, data: result });

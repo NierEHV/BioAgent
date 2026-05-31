@@ -1,6 +1,7 @@
 import { createAgentSession, SessionManager } from "@earendil-works/pi-coding-agent";
 import { cacheSessionPath } from "./session-reader";
 import type { AgentSessionLike, ToolInfo } from "./pi-types";
+import { bioagentTools, BIOAGENT_SYSTEM_PROMPT } from "./bioagent-tools";
 
 // ============================================================================
 // Types
@@ -269,12 +270,14 @@ export function getRpcSession(sessionId: string): AgentSessionWrapper | undefine
  * Get or create an AgentSession for the given session.
  * For new sessions (sessionFile === ""), pi generates its own id.
  * Pass toolNames to pre-configure active tools (empty array = all tools disabled).
+ * Set bioagent=true to enable BioAgent bioinformatics tools and thinking template.
  */
 export async function startRpcSession(
   sessionId: string,
   sessionFile: string,
   cwd: string,
-  toolNames?: string[]
+  toolNames?: string[],
+  bioagent?: boolean,
 ): Promise<{ session: AgentSessionWrapper; realSessionId: string }> {
   const registry = getRegistry();
   const locks = getLocks();
@@ -307,6 +310,8 @@ export async function startRpcSession(
       agentDir,
       sessionManager,
       ...(toolsOption !== undefined ? { tools: toolsOption } : {}),
+      // BioAgent: inject bioinformatics custom tools
+      ...(bioagent ? { customTools: bioagentTools as any } : {}),
     });
 
     // If specific tool names were requested (non-empty), narrow active tools now
@@ -315,10 +320,13 @@ export async function startRpcSession(
     }
 
     // When all tools are disabled, clear the system prompt entirely.
-    // pi's buildSystemPrompt always produces a non-empty prompt even with no tools;
-    // the only way to truly clear it is to call agent.setSystemPrompt directly.
     if (toolNames?.length === 0) {
       inner.agent.state.systemPrompt = "";
+    }
+
+    // BioAgent: append bioinformatics thinking template to system prompt
+    if (bioagent && inner.agent.state.systemPrompt) {
+      inner.agent.state.systemPrompt = (inner.agent.state.systemPrompt || "") + "\n\n" + BIOAGENT_SYSTEM_PROMPT;
     }
 
     const wrapper = new AgentSessionWrapper(inner);

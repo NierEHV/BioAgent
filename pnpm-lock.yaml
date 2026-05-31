@@ -143,9 +143,15 @@ importers:
       '@lobehub/icons':
         specifier: ^5.6.0
         version: 5.10.0(@lobehub/ui@5.15.6)(@types/react@19.2.15)(antd@6.4.3(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      '@sinclair/typebox':
+        specifier: ^0.34.49
+        version: 0.34.49
       '@types/react-syntax-highlighter':
         specifier: ^15.5.13
         version: 15.5.13
+      dockerode:
+        specifier: ^4.0.0
+        version: 4.0.12
       gsap:
         specifier: ^3.15.0
         version: 3.15.0
@@ -180,6 +186,9 @@ importers:
       '@testing-library/react':
         specifier: ^16.0.0
         version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.15))(@types/react@19.2.15)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      '@types/dockerode':
+        specifier: ^3.3.0
+        version: 3.3.47
       '@types/node':
         specifier: ^25
         version: 25.9.1
@@ -2156,6 +2165,9 @@ packages:
 
   '@silvia-odwyer/photon-node@0.3.4':
     resolution: {integrity: sha512-bnly4BKB3KDTFxrUIcgCLbaeVVS8lrAkri1pEzskpmxu9MdfGQTy8b8EgcD83ywD3RPMsIulY8xJH5Awa+t9fA==}
+
+  '@sinclair/typebox@0.34.49':
+    resolution: {integrity: sha512-brySQQs7Jtn0joV8Xh9ZV/hZb9Ozb0pmazDIASBkYKCjXrXU3mpcFahmK/z4YDhGkQvP9mWJbVyahdtU5wQA+A==}
 
   '@smithy/core@3.24.5':
     resolution: {integrity: sha512-Kt8phUg45M15EjhYAbZ+fFikYneijLu9Liugz8ZsYz2i8j0hzGv27LWKpEHYRfvj+LyCOSijpcR/2i8RouV+cA==}
@@ -8288,6 +8300,8 @@ snapshots:
   '@shikijs/vscode-textmate@10.0.2': {}
 
   '@silvia-odwyer/photon-node@0.3.4': {}
+
+  '@sinclair/typebox@0.34.49': {}
 
   '@smithy/core@3.24.5':
     dependencies:
