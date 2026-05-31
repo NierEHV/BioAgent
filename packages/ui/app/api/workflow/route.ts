@@ -2,54 +2,51 @@
 // @bioagent/ui — API: Workflow
 // ============================================================
 // GET  /api/workflow — list available workflows
-// POST /api/workflow — start a workflow
+// POST /api/workflow — start a workflow (real engine)
+// Real implementation using @bioagent/workflow + @bioagent/skills.
 
 import { NextRequest, NextResponse } from "next/server";
+import { join } from "node:path";
 
 // ---------------------------------------------------------------------------
-// Mock workflow registry
+// In-memory engine store (persists across hot-reload in dev)
 // ---------------------------------------------------------------------------
 
-const mockWorkflows = [
-  {
-    name: "scrna-seq-standard",
-    version: "1.0.0",
-    description: "Standard scRNA-seq analysis pipeline: QC → normalization → HVG → PCA → clustering → UMAP → marker detection → annotation",
-  },
-  {
-    name: "scrna-seq-qc-only",
-    version: "1.0.0",
-    description: "QC-only pipeline: data import → QC filtering → doublet detection",
-  },
-  {
-    name: "scrna-seq-diff-expression",
-    version: "1.0.0",
-    description: "Differential expression analysis pipeline with functional enrichment",
-  },
-];
-
-// ---------------------------------------------------------------------------
-// Mock workflow runs (in-memory store)
-// ---------------------------------------------------------------------------
-
-interface MockWorkflowRun {
+interface RunEntry {
+  engine: Awaited<ReturnType<typeof createEngine>>;
   runId: string;
   workflowName: string;
-  status: string;
-  progress: number;
-  currentNodes: string[];
-  totalNodes: number;
-  completedNodes: number;
-  failedNodes: number;
-  startedAt: string;
-  completedAt: string | null;
-  sessionId: string;
 }
 
-const workflowRuns = new Map<string, MockWorkflowRun>();
+declare global {
+  var __bioagentWorkflowRuns: Map<string, RunEntry> | undefined;
+}
 
-function generateRunId(): string {
-  return `run_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+function getRunStore(): Map<string, RunEntry> {
+  if (!globalThis.__bioagentWorkflowRuns) {
+    globalThis.__bioagentWorkflowRuns = new Map();
+  }
+  return globalThis.__bioagentWorkflowRuns;
+}
+
+async function createEngine() {
+  const { WorkflowEngine, WorkflowRegistry, SCRNA_SEQ_STANDARD } =
+    await import("@bioagent/workflow");
+  const { SkillRegistry, SkillExecutor } = await import("@bioagent/skills");
+  const { ContainerManager } = await import("@bioagent/executor");
+  const { CheckpointManager } = await import("@bioagent/workflow");
+
+  const registry = new WorkflowRegistry();
+  registry.register(SCRNA_SEQ_STANDARD);
+
+  const skillRegistry = new SkillRegistry();
+  const cm = new ContainerManager();
+  const skillExecutor = new SkillExecutor(skillRegistry, cm);
+  const checkpointMgr = new CheckpointManager(
+    join(process.cwd(), "..", "..", "data", "projects"),
+  );
+
+  return new WorkflowEngine(registry, skillExecutor, checkpointMgr);
 }
 
 // ---------------------------------------------------------------------------
@@ -62,18 +59,51 @@ export async function GET(req: NextRequest) {
 
   // Return specific workflow run state
   if (runId) {
-    const run = workflowRuns.get(runId);
-    if (!run) {
+    const store = getRunStore();
+    const entry = store.get(runId);
+    if (!entry) {
       return NextResponse.json(
         { error: "Workflow run not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
-    return NextResponse.json(run);
+    try {
+      const state = await entry.engine.getState(runId);
+      return NextResponse.json(state);
+    } catch (err: any) {
+      return NextResponse.json(
+        { error: err.message },
+        { status: 500 },
+      );
+    }
   }
 
-  // Return list of available workflows
-  return NextResponse.json(mockWorkflows);
+  // Return list of registered workflows
+  try {
+    const { WorkflowRegistry, SCRNA_SEQ_STANDARD } =
+      await import("@bioagent/workflow");
+    const registry = new WorkflowRegistry();
+    registry.register(SCRNA_SEQ_STANDARD);
+
+    const all = registry.getAll();
+    const workflows = all.map((wf) => ({
+      name: wf.name,
+      version: wf.version,
+      description: wf.description,
+      nodes: wf.nodes.map((n) => ({
+        id: n.id,
+        skill: n.skill,
+        dependsOn: n.dependsOn,
+      })),
+    }));
+
+    return NextResponse.json(workflows);
+  } catch (err: any) {
+    return NextResponse.json(
+      { error: `Failed to list workflows: ${err.message}` },
+      { status: 500 },
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -82,59 +112,52 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   let body: {
-    sessionId?: string;
     workflowName?: string;
+    projectId?: string;
     dataPath?: string;
+    container?: string;
+    paramOverrides?: Record<string, unknown>;
   };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json(
       { error: "Invalid JSON body" },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
-  if (!body.sessionId || !body.workflowName || !body.dataPath) {
+  if (!body.workflowName) {
     return NextResponse.json(
-      { error: "Missing required fields: sessionId, workflowName, dataPath" },
-      { status: 400 }
+      { error: "Missing required field: workflowName" },
+      { status: 400 },
     );
   }
 
-  const workflow = mockWorkflows.find(
-    (w) => w.name === body.workflowName
-  );
-  if (!workflow) {
+  try {
+    const engine = await createEngine();
+    const projectId = body.projectId || "default";
+    const dataPath =
+      body.dataPath || join(process.cwd(), "..", "..", "data", "projects", projectId, "data");
+    const container = body.container || "bioagent-scrna";
+
+    const runId = await engine.start({
+      workflowName: body.workflowName,
+      projectId,
+      dataPath,
+      container,
+      paramOverrides: body.paramOverrides,
+    });
+
+    // Store for later state queries
+    const store = getRunStore();
+    store.set(runId, { engine, runId, workflowName: body.workflowName });
+
+    return NextResponse.json({ runId, workflowName: body.workflowName });
+  } catch (err: any) {
     return NextResponse.json(
-      { error: `Workflow "${body.workflowName}" not found` },
-      { status: 404 }
+      { error: `Failed to start workflow: ${err.message}` },
+      { status: 500 },
     );
   }
-
-  const runId = generateRunId();
-  const totalNodes =
-    body.workflowName === "scrna-seq-standard"
-      ? 9
-      : body.workflowName === "scrna-seq-qc-only"
-        ? 3
-        : 5;
-
-  const run: MockWorkflowRun = {
-    runId,
-    workflowName: body.workflowName,
-    status: "running",
-    progress: 0,
-    currentNodes: [],
-    totalNodes,
-    completedNodes: 0,
-    failedNodes: 0,
-    startedAt: new Date().toISOString(),
-    completedAt: null,
-    sessionId: body.sessionId,
-  };
-
-  workflowRuns.set(runId, run);
-
-  return NextResponse.json({ runId });
 }
