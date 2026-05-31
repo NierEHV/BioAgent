@@ -178,6 +178,7 @@ export const translations = {
   deleteSessionConfirm: { zh: "确定要删除此会话吗？此操作不可撤销。", en: "Are you sure you want to delete this session? This cannot be undone." },
   selectProject: { zh: "选择项目…", en: "Select project…" },
   selectProjectFirst: { zh: "请先选择项目", en: "Select a project first" },
+  newProject: { zh: "新建项目", en: "New Project" },
   refreshSessions: { zh: "刷新", en: "Refresh" },
   rename: { zh: "重命名", en: "Rename" },
   explorer: { zh: "文件浏览器", en: "Explorer" },

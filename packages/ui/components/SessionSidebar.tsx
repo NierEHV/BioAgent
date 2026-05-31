@@ -207,6 +207,10 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [customPathOpen, setCustomPathOpen] = useState(false);
   const [customPathValue, setCustomPathValue] = useState("");
+  const [newProjectOpen, setNewProjectOpen] = useState(false);
+  const [newProjectName, setNewProjectName] = useState("");
+  const [newProjectParent, setNewProjectParent] = useState("");
+  const newProjectInputRef = useRef<HTMLInputElement>(null);
   const customPathInputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [explorerOpen, setExplorerOpen] = useState(true);
@@ -290,6 +294,26 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
     setCustomPathValue("");
     setDropdownOpen(false);
   }, [customPathValue]);
+
+  const handleCreateProject = useCallback(async () => {
+    const name = newProjectName.trim();
+    const parent = newProjectParent.trim() || (selectedCwd ?? "");
+    if (!name || !parent) return;
+
+    const projectPath = parent.replace(/[/\\]$/, "") + "/" + name;
+    try {
+      const res = await fetch("/api/projects/init", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path: projectPath }),
+      });
+      if (res.ok) {
+        setSelectedCwd(projectPath);
+        setNewProjectOpen(false);
+        setNewProjectName("");
+      }
+    } catch { /* ignore */ }
+  }, [newProjectName, newProjectParent, selectedCwd]);
 
   const handleDefaultCwd = useCallback(async () => {
     try {
@@ -430,38 +454,57 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
 
         {/* CWD picker */}
         <div ref={dropdownRef} style={{ position: "relative" }}>
-          <button
-            onClick={() => setDropdownOpen((v) => !v)}
-            style={{
-              width: "100%",
-              display: "flex",
-              alignItems: "center",
-              padding: "6px 10px",
-              background: selectedCwd ? "var(--bg-hover)" : "rgba(37,99,235,0.06)",
-              border: selectedCwd ? "1px solid var(--border)" : "1px solid rgba(37,99,235,0.4)",
-              borderRadius: 7,
-              cursor: "pointer",
-              fontSize: 12,
-              color: "var(--text)",
-              textAlign: "left",
-              transition: "border-color 0.15s, background 0.15s",
-            }}
-          >
-            <span
+          <div style={{ display: "flex", gap: 6 }}>
+            <button
+              onClick={() => setDropdownOpen((v) => !v)}
               style={{
                 flex: 1,
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-                fontFamily: "var(--font-mono)",
-                fontSize: 11,
-                color: selectedCwd ? "var(--text)" : "var(--text-dim)",
+                display: "flex",
+                alignItems: "center",
+                padding: "6px 10px",
+                background: selectedCwd ? "var(--bg-hover)" : "rgba(37,99,235,0.06)",
+                border: selectedCwd ? "1px solid var(--border)" : "1px solid rgba(37,99,235,0.4)",
+                borderRadius: 7,
+                cursor: "pointer",
+                fontSize: 12,
+                color: "var(--text)",
+                textAlign: "left",
+                transition: "border-color 0.15s, background 0.15s",
               }}
-              title={selectedCwd ?? ""}
             >
-              {selectedCwd ? shortenCwd(selectedCwd, homeDir) : (initialSessionId && !restoredRef.current ? "" : t("selectProject"))}
-            </span>
-          </button>
+              <span
+                style={{
+                  flex: 1,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                  fontFamily: "var(--font-mono)",
+                  fontSize: 11,
+                  color: selectedCwd ? "var(--text)" : "var(--text-dim)",
+                }}
+                title={selectedCwd ?? ""}
+              >
+                {selectedCwd ? shortenCwd(selectedCwd, homeDir) : (initialSessionId && !restoredRef.current ? "" : t("selectProject"))}
+              </span>
+            </button>
+            <button
+              onClick={() => setNewProjectOpen(true)}
+              title={t("newProject")}
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "center",
+                width: 32, height: 32,
+                background: "var(--bg-hover)", border: "1px solid var(--border)",
+                borderRadius: 7, color: "var(--text-muted)", cursor: "pointer",
+                flexShrink: 0, transition: "color 0.12s, border-color 0.12s",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = "var(--accent)"; e.currentTarget.style.borderColor = "rgba(37,99,235,0.4)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-muted)"; e.currentTarget.style.borderColor = "var(--border)"; }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+            </button>
+          </div>
 
           {dropdownOpen && (
             <div
@@ -670,6 +713,78 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
           />
         ))}
       </div>
+
+      {/* New Project Modal */}
+      {newProjectOpen && (
+        <>
+          <div
+            onClick={() => { setNewProjectOpen(false); setNewProjectName(""); }}
+            style={{ position: "fixed", inset: 0, zIndex: 400, background: "rgba(0,0,0,0.3)" }}
+          />
+          <div style={{
+            position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)",
+            zIndex: 401, background: "var(--bg)", border: "1px solid var(--border)",
+            borderRadius: 10, padding: 20, width: 380,
+            boxShadow: "0 16px 48px rgba(0,0,0,0.4)",
+          }}>
+            <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 14 }}>🧬 新建分析项目</div>
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 4 }}>项目名称</div>
+              <input
+                ref={newProjectInputRef}
+                value={newProjectName}
+                onChange={(e) => setNewProjectName(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") handleCreateProject(); }}
+                placeholder="例如: scrna-lung-tme"
+                autoFocus
+                style={{
+                  width: "100%", padding: "8px 12px",
+                  background: "var(--bg-panel)", border: "1px solid var(--border)",
+                  borderRadius: 6, color: "var(--text)", fontSize: 13, fontFamily: "inherit",
+                }}
+              />
+            </div>
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 4 }}>
+                创建位置 {selectedCwd ? `(默认: ${shortenCwd(selectedCwd, homeDir)})` : ""}
+              </div>
+              <input
+                value={newProjectParent}
+                onChange={(e) => setNewProjectParent(e.target.value)}
+                placeholder={selectedCwd ? shortenCwd(selectedCwd, homeDir) : "输入目录路径"}
+                style={{
+                  width: "100%", padding: "8px 12px",
+                  background: "var(--bg-panel)", border: "1px solid var(--border)",
+                  borderRadius: 6, color: "var(--text-muted)", fontSize: 12, fontFamily: "var(--font-mono)",
+                }}
+              />
+            </div>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+              <button
+                onClick={() => { setNewProjectOpen(false); setNewProjectName(""); }}
+                style={{
+                  padding: "7px 16px", borderRadius: 6, border: "1px solid var(--border)",
+                  background: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: 12,
+                }}
+              >
+                取消
+              </button>
+              <button
+                onClick={handleCreateProject}
+                disabled={!newProjectName.trim()}
+                style={{
+                  padding: "7px 16px", borderRadius: 6, border: "none",
+                  background: newProjectName.trim() ? "var(--accent)" : "var(--bg-selected)",
+                  color: newProjectName.trim() ? "#000" : "var(--text-dim)",
+                  cursor: newProjectName.trim() ? "pointer" : "not-allowed", fontSize: 12, fontWeight: 600,
+                }}
+              >
+                创建项目
+              </button>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* File Explorer section */}
       {(selectedCwdProp || selectedCwd) && (
