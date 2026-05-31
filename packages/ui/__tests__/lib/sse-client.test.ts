@@ -7,7 +7,7 @@ import {
   BioAgentSSEClient,
   BioAgentEventType,
   SSEClientState,
-} from "../../src/lib/sse-client";
+} from "@/lib/sse-client";
 
 // ---------------------------------------------------------------------------
 // Mock EventSource
