@@ -1,13 +1,10 @@
-"use client";
-
 // ============================================================
 // @bioagent/ui — BioAgent Custom Tools for pi-agent
 // ============================================================
-// Converts BioAgent backend tools into pi-agent ToolDefinition format.
+// SERVER-SIDE ONLY — imports dockerode (Node.js native).
 // These are passed as `customTools` to createAgentSession().
-//
-// pi-agent integration point: createAgentSession({ customTools: [...bioagentTools] })
 
+import "server-only";
 import type { ToolDefinition, ExtensionContext, AgentToolUpdateCallback } from "@earendil-works/pi-coding-agent";
 import { Type, type TSchema, type Static } from "@sinclair/typebox";
 
