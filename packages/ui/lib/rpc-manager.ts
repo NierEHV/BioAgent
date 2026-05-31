@@ -2,6 +2,7 @@ import { createAgentSession, SessionManager } from "@earendil-works/pi-coding-ag
 import { cacheSessionPath } from "./session-reader";
 import type { AgentSessionLike, ToolInfo } from "./pi-types";
 import { bioagentTools, BIOAGENT_SYSTEM_PROMPT } from "./bioagent-tools";
+import { bioagentBeforeToolCall, bioagentAfterToolCall, bioagentTransformContext } from "./bioagent-session";
 
 // ============================================================================
 // Types
@@ -324,8 +325,24 @@ export async function startRpcSession(
       inner.agent.state.systemPrompt = "";
     }
 
-    // BioAgent: append bioinformatics thinking template to system prompt
-    if (bioagent && inner.agent.state.systemPrompt) {
+    // BioAgent: replace system prompt with bioinformatics thinking template as primary
+    if (bioagent) {
+      // Use BioAgent's system prompt as the primary prompt
+      // (pi's default coding prompt becomes secondary via agent's buildSystemPrompt)
+      inner.agent.state.systemPrompt = BIOAGENT_SYSTEM_PROMPT;
+
+      // Inject BioAgent hooks directly into the pi-agent-core Agent instance
+      const agent = (inner as any).agent;
+      if (agent) {
+        // Safety validation before every tool call
+        if (bioagentBeforeToolCall) agent.beforeToolCall = bioagentBeforeToolCall;
+        // QC analysis after every tool call
+        if (bioagentAfterToolCall) agent.afterToolCall = bioagentAfterToolCall;
+        // Knowledge base injection before LLM calls
+        if (bioagentTransformContext) agent.transformContext = bioagentTransformContext;
+      }
+    } else if (bioagent && inner.agent.state.systemPrompt) {
+      // Fallback: append if full replacement not possible
       inner.agent.state.systemPrompt = (inner.agent.state.systemPrompt || "") + "\n\n" + BIOAGENT_SYSTEM_PROMPT;
     }
 
