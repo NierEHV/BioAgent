@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { SessionSidebar } from "./SessionSidebar";
+import { ProjectSidebar } from "./ProjectSidebar";
 import { ChatPanel } from "./ChatPanel";
 import { BottomPanel } from "./BottomPanel";
 import { StatusBar } from "./StatusBar";
@@ -364,7 +365,13 @@ export function AppShell() {
           ) : activeActivity === "knowledge" ? (
             <KnowledgeView cwd={selectedSession?.cwd ?? activeCwd ?? undefined} />
           ) : (
-            sidebarContent
+            <ProjectSidebar
+              selectedCwd={selectedSession?.cwd ?? newSessionCwd ?? activeCwd ?? null}
+              onCwdChange={handleCwdChange}
+              onOpenFile={handleOpenFile}
+              onAtMention={handleAtMention}
+              explorerRefreshKey={explorerRefreshKey}
+            />
           )}
         </div>
 
