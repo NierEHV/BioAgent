@@ -475,6 +475,36 @@ export function AppShell() {
                 </div>
               ) : null}
             </div>
+
+            {/* Resize: Chat Panel */}
+            <ResizeHandle
+              direction="h"
+              onResize={(d) => setChatWidth((w) => Math.max(280, Math.min(600, w - d)))}
+            />
+
+            {/* Chat Panel (#3) — Secondary Sidebar */}
+            <ChatPanel
+              width={chatWidth}
+              session={selectedSession}
+              newSessionCwd={effectiveNewSessionCwd}
+              sessionKey={sessionKey}
+              sessions={allSessions}
+              projectCwd={selectedSession?.cwd ?? newSessionCwd ?? activeCwd}
+              onSelectSession={handleSelectSession}
+              onNewSession={() => {
+                const cwd = selectedSession?.cwd || activeCwd;
+                if (cwd) handleNewSession("", cwd);
+              }}
+              modelsRefreshKey={modelsRefreshKey}
+              chatInputRef={chatInputRef}
+              onAgentEnd={handleAgentEnd}
+              onSessionCreated={handleSessionCreated}
+              onSessionForked={handleSessionForked}
+              onBranchDataChange={handleBranchDataChange}
+              onSystemPromptChange={handleSystemPromptChange}
+              onSessionStatsChange={handleSessionStatsChange}
+              onContextUsageChange={handleContextUsageChange}
+            />
           </div>
 
           {/* Resize: Bottom Panel */}
@@ -487,36 +517,6 @@ export function AppShell() {
           {bottomPanelOpen && <BottomPanel height={panelHeight} />}
         </div>
       </div>
-
-      {/* Resize: Chat Panel */}
-      <ResizeHandle
-        direction="h"
-        onResize={(d) => setChatWidth((w) => Math.max(280, Math.min(600, w - d)))}
-      />
-
-      {/* Chat Panel (#3) — Secondary Sidebar (touches bottom) */}
-      <ChatPanel
-        width={chatWidth}
-        session={selectedSession}
-        newSessionCwd={effectiveNewSessionCwd}
-        sessionKey={sessionKey}
-        sessions={allSessions}
-        projectCwd={selectedSession?.cwd ?? newSessionCwd ?? activeCwd}
-        onSelectSession={handleSelectSession}
-        onNewSession={() => {
-          const cwd = selectedSession?.cwd || activeCwd;
-          if (cwd) handleNewSession("", cwd);
-        }}
-        modelsRefreshKey={modelsRefreshKey}
-        chatInputRef={chatInputRef}
-        onAgentEnd={handleAgentEnd}
-        onSessionCreated={handleSessionCreated}
-        onSessionForked={handleSessionForked}
-        onBranchDataChange={handleBranchDataChange}
-        onSystemPromptChange={handleSystemPromptChange}
-        onSessionStatsChange={handleSessionStatsChange}
-        onContextUsageChange={handleContextUsageChange}
-      />
 
       {/* ── Status Bar (#9) ── */}
       <StatusBar
