@@ -435,6 +435,14 @@ export function AppShell() {
               session={selectedSession}
               newSessionCwd={effectiveNewSessionCwd}
               sessionKey={sessionKey}
+              sessions={[]}
+              onNewSession={() => {
+                if (selectedSession?.cwd) {
+                  handleNewSession("", selectedSession.cwd);
+                } else if (activeCwd) {
+                  handleNewSession("", activeCwd);
+                }
+              }}
               modelsRefreshKey={modelsRefreshKey}
               chatInputRef={chatInputRef}
               onAgentEnd={handleAgentEnd}
@@ -446,11 +454,11 @@ export function AppShell() {
               onContextUsageChange={handleContextUsageChange}
             />
           </div>
+
+          {/* ── Bottom Panel (#8) — only under editor ── */}
+          <BottomPanel />
         </div>
       </div>
-
-      {/* ── Bottom Panel (#8) ── */}
-      <BottomPanel />
 
       {/* ── Status Bar (#9) ── */}
       <StatusBar

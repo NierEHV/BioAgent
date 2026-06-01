@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import { ChatWindow } from "./ChatWindow";
 import type { SessionInfo, SessionTreeNode } from "@/lib/types";
 import type { ChatInputHandle } from "./ChatInput";
@@ -8,6 +9,9 @@ interface ChatPanelProps {
   session: SessionInfo | null;
   newSessionCwd: string | null;
   sessionKey: number;
+  sessions?: SessionInfo[];
+  onSelectSession?: (session: SessionInfo) => void;
+  onNewSession?: () => void;
   modelsRefreshKey?: number;
   chatInputRef?: React.RefObject<ChatInputHandle | null>;
   onAgentEnd?: () => void;
@@ -23,6 +27,9 @@ export function ChatPanel({
   session,
   newSessionCwd,
   sessionKey,
+  sessions = [],
+  onSelectSession,
+  onNewSession,
   modelsRefreshKey,
   chatInputRef,
   onAgentEnd,
@@ -34,6 +41,19 @@ export function ChatPanel({
   onContextUsageChange,
 }: ChatPanelProps) {
   const showChat = session !== null || newSessionCwd !== null;
+  const selectRef = useRef<HTMLSelectElement>(null);
+
+  const handleSelectChange = () => {
+    const id = selectRef.current?.value;
+    if (id && onSelectSession) {
+      const s = sessions.find((s) => s.id === id);
+      if (s) onSelectSession(s);
+    }
+  };
+
+  const filteredSessions = sessions.filter(
+    (s) => !session || s.cwd === session.cwd,
+  );
 
   return (
     <div
@@ -46,21 +66,74 @@ export function ChatPanel({
         background: "var(--bg)",
       }}
     >
-      {/* Header */}
+      {/* Header with session selector */}
       <div
         style={{
           display: "flex",
           alignItems: "center",
           height: 30,
-          padding: "0 12px",
+          padding: "0 8px",
           background: "var(--bg-panel)",
           borderBottom: "1px solid var(--border)",
           fontSize: 11,
-          fontWeight: 600,
           flexShrink: 0,
+          gap: 6,
         }}
       >
-        💬 对话
+        <span>💬</span>
+        {filteredSessions.length > 0 ? (
+          <select
+            ref={selectRef}
+            value={session?.id ?? ""}
+            onChange={handleSelectChange}
+            style={{
+              flex: 1,
+              padding: "2px 4px",
+              background: "var(--bg)",
+              border: "1px solid var(--border)",
+              color: "var(--text)",
+              fontSize: 10,
+              borderRadius: 4,
+              maxWidth: 200,
+              cursor: "pointer",
+            }}
+          >
+            <option value="" disabled>
+              选择会话...
+            </option>
+            {filteredSessions.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.firstMessage?.slice(0, 60) || s.id.slice(0, 8)}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <span style={{ flex: 1, fontSize: 10, color: "var(--muted)" }}>
+            对话
+          </span>
+        )}
+        {onNewSession && (
+          <button
+            onClick={onNewSession}
+            title="新建会话"
+            style={{
+              width: 22,
+              height: 22,
+              border: "1px solid var(--border)",
+              background: "var(--bg)",
+              color: "var(--muted)",
+              borderRadius: 4,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 14,
+              flexShrink: 0,
+            }}
+          >
+            +
+          </button>
+        )}
       </div>
 
       {/* Chat content */}
