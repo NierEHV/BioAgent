@@ -2,28 +2,44 @@
 
 import { useState, useEffect } from "react";
 
-export function ContainerListView() {
+interface ContainerListViewProps {
+  cwd?: string;
+}
+
+export function ContainerListView({ cwd }: ContainerListViewProps) {
   const [containers, setContainers] = useState<any[]>([]);
 
   useEffect(() => {
-    // Poll container list from backend
     const poll = () => {
       fetch("/api/resources")
         .then((r) => r.json())
         .then((data) => {
-          // Extract container info — in production this would be a dedicated API
-          setContainers([
-            { name: "scrna-qc-001", image: "bioagent-scrna", status: "running", memory: "1.2GB", uptime: "12min" },
-            { name: "fastqc-batch", image: "staphb/fastqc", status: "running", memory: "679MB", uptime: "3min" },
-            { name: "bulk-rna-test", image: "bioagent-scrna", status: "exited", memory: "-", uptime: "2h ago" },
-          ]);
+          // For now show mock containers scoped to project
+          const all: any[] = [];
+          if (data.docker?.running) {
+            // Mock containers that would be project-specific
+            all.push(
+              { name: "scrna-qc-001", image: "bioagent-scrna", status: "running", memory: "1.2GB", uptime: "12min" },
+              { name: "fastqc-batch", image: "staphb/fastqc", status: "running", memory: "679MB", uptime: "3min" },
+              { name: "bulk-rna-test", image: "bioagent-scrna", status: "exited", memory: "-", uptime: "2h ago" },
+            );
+          }
+          setContainers(all);
         })
         .catch(() => {});
     };
     poll();
     const i = setInterval(poll, 5000);
     return () => clearInterval(i);
-  }, []);
+  }, [cwd]);
+
+  if (containers.length === 0) {
+    return (
+      <div style={{ padding: 16, textAlign: "center", color: "var(--text-dim)", fontSize: 11 }}>
+        暂无运行中的容器
+      </div>
+    );
+  }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>

@@ -13,6 +13,8 @@ import { SkillsConfig } from "./SkillsConfig";
 import { BranchNavigator } from "./BranchNavigator";
 import { ActivityBar, type ActivityId } from "./ActivityBar";
 import { ResizeHandle } from "./ResizeHandle";
+import { ContainerListView } from "./ContainerListView";
+import { KnowledgeView } from "./KnowledgeView";
 import { useTheme } from "@/hooks/useTheme";
 import { useLanguage } from "@/hooks/useLanguage";
 import LanguageSwitch from "./LanguageSwitch";
@@ -39,6 +41,7 @@ export function AppShell() {
   const [sidebarWidth, setSidebarWidth] = useState(260);
   const [chatWidth, setChatWidth] = useState(400);
   const [panelHeight, setPanelHeight] = useState(160);
+  const [bottomPanelOpen, setBottomPanelOpen] = useState(true);
   const chatInputRef = useRef<ChatInputHandle | null>(null);
   const topBarRef = useRef<HTMLDivElement>(null);
 
@@ -356,7 +359,13 @@ export function AppShell() {
             flexShrink: 0, width: sidebarWidth, zIndex: 200,
           }}
         >
-          {sidebarContent}
+          {activeActivity === "containers" ? (
+            <ContainerListView cwd={selectedSession?.cwd ?? activeCwd ?? undefined} />
+          ) : activeActivity === "knowledge" ? (
+            <KnowledgeView cwd={selectedSession?.cwd ?? activeCwd ?? undefined} />
+          ) : (
+            sidebarContent
+          )}
         </div>
 
         {/* Resize: Sidebar */}
@@ -389,6 +398,21 @@ export function AppShell() {
                   <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
                 </svg>
               )}
+            </button>
+            <button
+              onClick={() => setBottomPanelOpen((v) => !v)}
+              title={bottomPanelOpen ? "隐藏底部面板" : "显示底部面板"}
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "center",
+                width: 36, height: 36, padding: 0,
+                background: "none", border: "none", borderRight: "1px solid var(--border)",
+                color: bottomPanelOpen ? "var(--text-muted)" : "var(--accent)",
+                cursor: "pointer", flexShrink: 0, transition: "color 0.12s",
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="4 17 12 9 20 17" />
+              </svg>
             </button>
             <LanguageSwitch />
             <button
@@ -490,7 +514,7 @@ export function AppShell() {
           />
 
           {/* ── Bottom Panel (#8) — only under editor ── */}
-          <BottomPanel height={panelHeight} />
+          {bottomPanelOpen && <BottomPanel height={panelHeight} />}
         </div>
       </div>
 

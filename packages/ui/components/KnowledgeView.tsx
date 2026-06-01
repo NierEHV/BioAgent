@@ -1,6 +1,6 @@
 "use client";
 
-export function KnowledgeView() {
+export function KnowledgeView({ cwd: _cwd }: { cwd?: string }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
       <div style={{ fontSize: 10, color: "var(--muted)", textTransform: "uppercase", letterSpacing: 1, marginBottom: 4, padding: "0 4px" }}>
