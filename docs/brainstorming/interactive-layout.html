@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BioAgent 交互式布局 — 可修改</title>
+<style>:root{--bg:#0d1117;--bg2:#161b22;--bg3:#12171f;--border:#30363d;--text:#e6edf3;--muted:#8b949e;--accent:#58a6ff;--green:#3fb950;--orange:#d29922;--red:#f85149;--aw:44px;--sw:260px;--ph:160px;--sh:22px}*{margin:0;padding:0;box-sizing:border-box}body{background:#000;color:var(--text);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;overflow:hidden;height:100vh}.app{display:flex;flex-direction:column;height:100vh;background:var(--bg)}.main-row{flex:1;display:flex;overflow:hidden}.activity-bar{width:44px;flex-shrink:0;background:var(--bg3);border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding-top:4px}.activity-btn{width:36px;height:36px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--muted);cursor:pointer;margin-bottom:2px;border:none;background:none;opacity:.5;position:relative;transition:opacity .12s,color .12s}.activity-btn:hover{opacity:1;color:var(--text)}.activity-btn.active{opacity:1;color:var(--accent)}.activity-btn.active::after{content:"";position:absolute;left:0;top:6px;bottom:6px;width:2px;background:var(--accent);border-radius:0 2px 2px 0}.activity-spacer{flex:1}.sidebar{width:260px;flex-shrink:0;background:var(--bg3);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}.sidebar-header{padding:8px 10px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);flex-shrink:0}.sidebar-header .title{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}.sidebar-scroll{flex:1;overflow-y:auto;padding:4px 0}.file-tree{font-family:"Cascadia Code",monospace;font-size:11px;line-height:2;padding:0}.file-row{display:flex;align-items:center;gap:4px;padding:1px 10px;cursor:pointer;white-space:nowrap}.file-row:hover{background:rgba(88,166,255,.06)}.file-row .icon{width:16px;text-align:center;flex-shrink:0}.file-row .name.dir{color:var(--accent)}.project-selector{padding:4px 10px;border-bottom:1px solid var(--border)}.project-selector select{width:100%;padding:4px 6px;background:var(--bg);border:1px solid var(--border);color:var(--text);font-size:11px;border-radius:4px}.container-item{padding:6px 10px;border-bottom:1px solid var(--border);font-size:11px}.container-item .dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}.container-item .dot.running{background:var(--green)}.container-item .dot.exited{background:var(--red)}.center-area{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}.topbar{display:flex;align-items:center;height:36px;background:var(--bg3);border-bottom:1px solid var(--border);padding:0 8px;flex-shrink:0;gap:6px}.topbar-btn{width:28px;height:28px;border:none;background:none;color:var(--muted);cursor:pointer;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:14px}.topbar-btn:hover{background:var(--bg2)}.editor-row{flex:1;display:flex;overflow:hidden}.main-editor{flex:1;overflow:auto;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;color:var(--muted);font-size:13px}.main-editor .big-icon{font-size:40px;opacity:.2}.chat-panel{width:400px;flex-shrink:0;border-left:1px solid var(--border);display:flex;flex-direction:column;background:var(--bg)}.chat-header{display:flex;align-items:center;height:30px;padding:0 12px;background:var(--bg3);border-bottom:1px solid var(--border);font-size:11px;font-weight:600;flex-shrink:0}.chat-messages{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:10px}.chat-msg{max-width:88%;font-size:11px}.chat-msg.user{align-self:flex-end}.chat-msg.user .bubble{background:#1a3a5c;padding:8px 10px;border-radius:10px 10px 2px 10px}.chat-msg.agent .bubble{background:var(--bg2);border:1px solid var(--border);padding:8px 10px;border-radius:10px 10px 10px 2px;line-height:1.7}.chat-msg.agent .bubble code{background:#0d1117;padding:1px 4px;border-radius:3px;color:var(--accent)}.chat-input-area{display:flex;gap:6px;padding:6px 8px;border-top:1px solid var(--border);flex-shrink:0}.chat-input{flex:1;padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:11px;font-family:inherit}.bottom-panel{height:160px;flex-shrink:0;background:var(--bg3);border-top:1px solid var(--border);display:flex;flex-direction:column}.panel-tabs{display:flex;height:24px;border-bottom:1px solid var(--border);align-items:center;flex-shrink:0}.panel-tab{padding:2px 12px;font-size:10px;color:var(--muted);cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;display:flex;align-items:center;gap:4px}.panel-tab.active{color:var(--text);border-bottom-color:var(--accent)}.panel-collapse{margin-left:auto;margin-right:6px;border:none;background:none;color:var(--muted);cursor:pointer;font-size:10px}.panel-content{flex:1;overflow:auto;padding:4px 10px;font-family:var(--font-mono);font-size:10px;line-height:1.7;color:var(--muted)}.statusbar{display:flex;align-items:center;height:22px;padding:0 8px;background:var(--accent);font-size:10px;flex-shrink:0}.status-left{display:flex;gap:12px}.status-right{margin-left:auto;display:flex;gap:12px}.status-item{color:rgba(0,0,0,.75);cursor:pointer}.status-item:hover{color:#000}.editable{border:1px dashed transparent;cursor:text;padding:1px 3px;border-radius:2px;transition:border-color .2s}.editable:hover{border-color:rgba(88,166,255,.4)}.editable:focus{outline:none;border-color:var(--accent);background:rgba(88,166,255,.08)}.resize-handle{width:4px;cursor:col-resize;flex-shrink:0;background:transparent;transition:background .2s}.resize-handle:hover,.resize-handle.active{background:var(--accent)}.resize-handle-v{height:4px;cursor:row-resize;flex-shrink:0;background:transparent;transition:background .2s}.resize-handle-v:hover,.resize-handle-v.active{background:var(--accent)}.hidden{display:none!important}.tab-content{display:none}.tab-content.active{display:block}.qc-inline{margin:8px 0;padding:6px 10px;background:rgba(63,185,80,.08);border:1px solid var(--green);border-radius:6px;font-size:10px}.qc-inline .gate{display:flex;align-items:center;gap:4px;padding:2px 0}.qc-inline .gate .dot{width:5px;height:5px;border-radius:50%}.qc-inline .gate .dot.pass{background:var(--green)}.qc-inline .gate .dot.warn{background:var(--orange)}.tooltip{position:fixed;background:var(--bg);border:1px solid var(--border);padding:6px 10px;border-radius:6px;font-size:11px;z-index:999;pointer-events:none;box-shadow:0 4px 12px rgba(0,0,0,.5)}.edit-panel{position:fixed;top:0;right:0;width:320px;height:100vh;background:var(--bg);border-left:1px solid var(--border);z-index:500;padding:16px;overflow-y:auto;font-size:11px;transform:translateX(100%);transition:transform .25s ease}.edit-panel.open{transform:translateX(0)}.edit-panel h3{font-size:13px;margin-bottom:12px;color:var(--accent)}.edit-panel label{display:block;font-size:10px;color:var(--muted);margin-bottom:3px;text-transform:uppercase}.edit-panel input,.edit-panel select{width:100%;padding:4px 6px;background:var(--bg2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:11px;margin-bottom:10px}.edit-panel .btn{padding:6px 12px;border-radius:4px;font-size:11px;cursor:pointer;border:none;font-weight:600}.edit-panel .btn-primary{background:var(--accent);color:#000}.edit-panel .btn-secondary{background:var(--bg2);color:var(--text);border:1px solid var(--border);margin-left:6px}.edit-toggle{position:fixed;top:8px;right:8px;z-index:501;padding:4px 10px;background:var(--accent);color:#000;border:none;border-radius:4px;font-size:10px;font-weight:600;cursor:pointer}</style>
+</head>
+<body>
+
+<div class="app" id="app">
+  <!-- Main Row -->
+  <div class="main-row">
+    <!-- Activity Bar -->
+    <div class="activity-bar" contenteditable="false">
+      <button class="activity-btn active" data-tab="files" onclick="switchTab(this)" title="文件浏览器">📁</button>
+      <button class="activity-btn" data-tab="containers" onclick="switchTab(this)" title="容器管理">🐳</button>
+      <button class="activity-btn" data-tab="knowledge" onclick="switchTab(this)" title="知识库">📚</button>
+      <div class="activity-spacer"></div>
+      <button class="activity-btn" data-tab="settings" onclick="switchTab(this)" title="设置" style="margin-bottom:4px">⚙️</button>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+      <!-- Project selector -->
+      <div class="project-selector">
+        <select><option>🧬 scrna-lung-tme</option><option>🧬 pbmc-test</option><option>🧬 bulk-rna-test</option></select>
+      </div>
+
+      <!-- Container view -->
+      <div class="sidebar-scroll tab-content active" id="tab-containers" style="display:none">
+        <div class="sidebar-header"><span class="title">🐳 容器 (2 running)</span></div>
+        <div class="container-item"><div style="display:flex;align-items:center;gap:6px"><span class="dot running"></span><strong>scrna-qc-001</strong></div><div style="font-size:9px;color:var(--muted);margin:2px 0 0 13px">bioagent-scrna · 1.2GB · 12min</div></div>
+        <div class="container-item"><div style="display:flex;align-items:center;gap:6px"><span class="dot running"></span><strong>fastqc-batch</strong></div><div style="font-size:9px;color:var(--muted);margin:2px 0 0 13px">staphb/fastqc · 679MB · 3min</div></div>
+        <div class="container-item" style="opacity:.5"><div style="display:flex;align-items:center;gap:6px"><span class="dot exited"></span><strong>bulk-rna-test</strong></div><div style="font-size:9px;color:var(--muted);margin:2px 0 0 13px">已停止 · 2h前</div></div>
+      </div>
+
+      <!-- Knowledge view -->
+      <div class="sidebar-scroll tab-content" id="tab-knowledge" style="display:none">
+        <div class="sidebar-header"><span class="title">📚 知识库 (19篇)</span></div>
+        <div style="font-size:11px;color:var(--muted);padding:8px 10px;line-height:2">
+          <div>📄 scRNA-seq QC 最佳实践</div><div>📄 归一化方法对比</div>
+          <div>📄 聚类参数选择指南</div><div>📄 细胞注释最佳实践</div>
+          <div>📄 批次效应校正指南</div><div>📄 拟时间轨迹分析指南</div>
+          <div>📄 细胞间通讯分析指南</div><div>📄 Scanpy 使用指南</div>
+        </div>
+      </div>
+
+      <!-- Settings view -->
+      <div class="sidebar-scroll tab-content" id="tab-settings" style="display:none">
+        <div class="sidebar-header"><span class="title">⚙️ 网络设置</span></div>
+        <div style="padding:10px;font-size:11px">
+          <label style="font-size:10px;color:var(--muted);display:block;margin-bottom:3px">HTTP 代理</label>
+          <input style="width:100%;padding:4px 6px;background:var(--bg);border:1px solid var(--border);color:var(--text);font-size:11px;border-radius:4px;margin-bottom:8px" value="http://127.0.0.1:65532">
+          <label style="font-size:10px;color:var(--muted);display:block;margin-bottom:3px">HTTPS 代理</label>
+          <input style="width:100%;padding:4px 6px;background:var(--bg);border:1px solid var(--border);color:var(--text);font-size:11px;border-radius:4px;margin-bottom:8px" value="http://127.0.0.1:65532">
+          <div style="color:var(--green);font-size:10px">✅ Docker Hub 可达</div>
+        </div>
+      </div>
+
+      <!-- File tree (default) -->
+      <div class="sidebar-scroll" id="tab-files">
+        <div class="sidebar-header"><span class="title">📁 文件浏览器</span></div>
+        <div class="file-tree">
+          <div class="file-row"><span class="icon">📂</span><span class="name dir">raw/</span></div>
+          <div class="file-row" style="padding-left:20px"><span class="icon">🧬</span><span style="color:var(--green)">pbmc3k.h5ad</span></div>
+          <div class="file-row" style="padding-left:20px"><span class="icon">📊</span><span style="color:var(--orange)">metadata.csv</span></div>
+          <div class="file-row"><span class="icon">📂</span><span class="name dir">intermediate/</span></div>
+          <div class="file-row" style="padding-left:20px"><span class="icon">🧬</span><span style="color:var(--green)">qc_filtered.h5ad</span></div>
+          <div class="file-row"><span class="icon">📂</span><span class="name dir">output/</span></div>
+          <div class="file-row" style="padding-left:20px"><span class="icon">📊</span><span style="color:var(--orange)">de_results.csv</span></div>
+          <div class="file-row" style="padding-left:20px"><span class="icon">📄</span><span style="color:#a371f7">report.html</span></div>
+          <div class="file-row"><span class="icon">📄</span>project.yml</div>
+          <div style="border-top:1px solid var(--border);margin-top:8px;padding-top:4px">
+            <div class="sidebar-header"><span class="title">💬 会话</span></div>
+            <div class="file-row" style="font-size:11px;font-family:inherit"><span>💬</span> QC 分析对话</div>
+            <div class="file-row" style="font-size:11px;font-family:inherit"><span>💬</span> 差异表达分析</div>
+            <div class="file-row" style="font-size:11px;font-family:inherit"><span>💬</span> 初始设置</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Resize handle: sidebar -->
+    <div class="resize-handle" id="sidebar-resize" onmousedown="startResize(event,'sidebar',260,160,500)"></div>
+
+    <!-- Center -->
+    <div class="center-area">
+      <!-- Top bar -->
+      <div class="topbar">
+        <button class="topbar-btn" onclick="toggleSidebar()" title="切换侧栏">☰</button>
+        <span style="font-size:10px;color:var(--muted)">🌐</span>
+        <span style="font-size:10px;color:var(--muted)">🌙</span>
+        <div style="flex:1"></div>
+        <span style="font-size:10px;color:var(--muted);margin-right:8px">0% / 1.0M ctx</span>
+      </div>
+
+      <!-- Editor + Chat -->
+      <div class="editor-row">
+        <!-- Main Editor -->
+        <div class="main-editor" id="main-editor">
+          <div class="big-icon">🧬</div>
+          <div>BioAgent 分析工作区</div>
+          <div style="font-size:11px;color:var(--text-dim)">在左侧选择项目，开始生信分析</div>
+          <div style="font-size:11px;color:var(--text-dim)">打开文件后将在此区域显示</div>
+        </div>
+
+        <!-- Resize handle: chat panel -->
+        <div class="resize-handle" id="chat-resize" onmousedown="startResize(event,'chat',400,280,600)"></div>
+
+        <!-- Chat Panel -->
+        <div class="chat-panel" id="chat-panel">
+          <div class="chat-header">💬 对话</div>
+          <div class="chat-messages">
+            <div class="chat-msg agent">
+              <div class="bubble">
+                🧠 已理解你的分析需求：<br>
+                对 scRNA-seq PBMC 3k 数据执行 QC 过滤<br><br>
+                <code>🔧 docker_exec start_container</code><br>
+                <code>✅ QC: 2698/2700 cells (99.9%)</code>
+              </div>
+            </div>
+            <div class="qc-inline" style="align-self:flex-start;max-width:88%">
+              <div style="font-weight:600;margin-bottom:4px">✅ scrna-qc — PASS</div>
+              <div class="gate"><span class="dot pass"></span> 基因数: median 817/cell</div>
+              <div class="gate"><span class="dot pass"></span> UMIs: median 2197/cell</div>
+              <div class="gate"><span class="dot warn"></span> pctMT: 2.03% (阈值20%)</div>
+            </div>
+            <div class="chat-msg user"><div class="bubble">下一步做归一化和聚类</div></div>
+          </div>
+          <div class="chat-input-area">
+            <input class="chat-input" placeholder="输入分析指令...">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Resize handle: bottom panel -->
+  <div class="resize-handle-v" id="panel-resize" onmousedown="startResizeV(event,'panel',160,60,400)"></div>
+
+  <!-- Bottom Panel -->
+  <div class="bottom-panel" id="bottom-panel">
+    <div class="panel-tabs">
+      <button class="panel-tab active" onclick="switchPanelTab(this,'output')">📤 输出</button>
+      <button class="panel-tab" onclick="switchPanelTab(this,'docker')">🐳 docker logs</button>
+      <button class="panel-tab" onclick="switchPanelTab(this,'terminal')">&gt; 终端</button>
+      <button class="panel-collapse" onclick="togglePanel()" title="折叠面板">▼</button>
+    </div>
+    <div class="panel-content" id="panel-output">
+      <div style="color:var(--accent)">[BioAgent] 开始执行: scrna-qc</div>
+      <div>$ docker run -d --name scrna-qc-001 bioagent-scrna sleep infinity</div>
+      <div style="color:var(--green)">Container started: scrna-qc-001 (3e5ad8335c67)</div>
+      <div>$ docker exec scrna-qc-001 python -c "import scanpy..."</div>
+      <div style="color:var(--green)">✅ Exit Code: 0 | Duration: 2.3s</div>
+      <div>Cells after filter: 2698 (99.9%)</div>
+    </div>
+    <div class="panel-content hidden" id="panel-docker">暂无容器日志 — 执行 docker_exec 后将在此显示</div>
+    <div class="panel-content hidden" id="panel-terminal">$ _</div>
+  </div>
+
+  <!-- Status Bar -->
+  <div class="statusbar">
+    <div class="status-left">
+      <span class="status-item">🐳 2 containers</span>
+      <span class="status-item">📊 0% / 1.0M ctx</span>
+    </div>
+    <div class="status-right">
+      <span class="status-item">🔗 代理: 127.0.0.1:65532</span>
+      <span class="status-item">DeepSeek V4 Pro</span>
+      <span class="status-item">$0.0004</span>
+    </div>
+  </div>
+</div>
+
+<!-- Edit toggle -->
+<button class="edit-toggle" onclick="toggleEditPanel()">⚙️ 编辑面板</button>
+
+<!-- Edit panel -->
+<div class="edit-panel" id="edit-panel">
+  <h3>⚙️ 布局参数</h3>
+
+  <p style="color:var(--muted);margin-bottom:12px;font-size:10px">修改以下参数实时预览效果。修改后复制 HTML 给我。</p>
+
+  <label>Activity Bar 宽度 (px)</label>
+  <input type="range" id="edit-activity-width" min="32" max="64" value="44" oninput="updateLayout()">
+  <span id="val-activity-width" style="font-size:10px;color:var(--accent)">44px</span>
+
+  <label>Sidebar 宽度 (px)</label>
+  <input type="range" id="edit-sidebar-width" min="160" max="500" value="260" oninput="updateLayout()">
+  <span id="val-sidebar-width" style="font-size:10px;color:var(--accent)">260px</span>
+
+  <label>Chat Panel 宽度 (px)</label>
+  <input type="range" id="edit-chat-width" min="280" max="600" value="400" oninput="updateLayout()">
+  <span id="val-chat-width" style="font-size:10px;color:var(--accent)">400px</span>
+
+  <label>Bottom Panel 高度 (px)</label>
+  <input type="range" id="edit-panel-height" min="60" max="400" value="160" oninput="updateLayout()">
+  <span id="val-panel-height" style="font-size:10px;color:var(--accent)">160px</span>
+
+  <label>Status Bar 高度 (px)</label>
+  <input type="range" id="edit-status-height" min="16" max="36" value="22" oninput="updateLayout()">
+  <span id="val-status-height" style="font-size:10px;color:var(--accent)">22px</span>
+
+  <label>Chat Panel 位置</label>
+  <select id="edit-chat-position" onchange="updateLayout()">
+    <option value="right">右侧 (默认)</option>
+    <option value="left">左侧</option>
+  </select>
+
+  <label>Bottom Panel 位置</label>
+  <select id="edit-panel-position" onchange="updateLayout()">
+    <option value="bottom">底部 (默认)</option>
+    <option value="right">右侧</option>
+  </select>
+
+  <label>主题</label>
+  <select id="edit-theme" onchange="updateTheme()">
+    <option value="dark">深色 (默认)</option>
+    <option value="light">浅色</option>
+  </select>
+
+  <div style="margin-top:16px;display:flex;gap:8px">
+    <button class="btn btn-primary" onclick="exportHTML()">📋 复制 HTML</button>
+    <button class="btn btn-secondary" onclick="resetLayout()">↩ 重置</button>
+  </div>
+</div>
+
+<script>
+// Tab switching
+function switchTab(btn) {
+  document.querySelectorAll('.activity-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const tab = btn.dataset.tab;
+  document.querySelectorAll('.tab-content').forEach(t => t.style.display = 'none');
+  const files = document.getElementById('tab-files');
+  const target = document.getElementById('tab-' + tab);
+  if (tab === 'files') { files.style.display = ''; }
+  else { files.style.display = 'none'; if(target) target.style.display = ''; }
+}
+
+// Panel tab switching
+function switchPanelTab(btn, tab) {
+  btn.parentElement.querySelectorAll('.panel-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('[id^="panel-"][id$=""]').forEach(t => t.classList.add('hidden'));
+  ['panel-output','panel-docker','panel-terminal'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList[id === 'panel-' + tab ? 'remove' : 'add']('hidden');
+  });
+}
+
+// Toggle sidebar
+function toggleSidebar() {
+  const s = document.getElementById('sidebar');
+  s.style.display = s.style.display === 'none' ? 'flex' : 'none';
+}
+
+// Toggle panel
+function togglePanel() {
+  const p = document.getElementById('bottom-panel');
+  p.style.height = p.style.height === '24px' ? document.getElementById('edit-panel-height').value + 'px' : '24px';
+  p.querySelector('.panel-content').classList.toggle('hidden');
+}
+
+// Resize
+let resizeTarget = null, resizeStart = 0, resizeOrig = 0;
+function startResize(e, target, orig, min, max) {
+  resizeTarget = target;
+  resizeStart = target === 'sidebar' ? e.clientX : e.clientX;
+  resizeOrig = orig;
+  document.addEventListener('mousemove', onResize);
+  document.addEventListener('mouseup', stopResize);
+  e.target.classList.add('active');
+}
+function startResizeV(e, target, orig, min, max) {
+  resizeTarget = target;
+  resizeStart = e.clientY;
+  resizeOrig = orig;
+  document.addEventListener('mousemove', onResizeV);
+  document.addEventListener('mouseup', stopResize);
+  e.target.classList.add('active');
+}
+function onResize(e) {
+  const delta = e.clientX - resizeStart;
+  const val = Math.max(160, Math.min(500, resizeOrig + delta));
+  if (resizeTarget === 'sidebar') {
+    document.querySelector('.sidebar').style.width = val + 'px';
+    document.getElementById('edit-sidebar-width').value = val;
+    document.getElementById('val-sidebar-width').textContent = val + 'px';
+  } else if (resizeTarget === 'chat') {
+    document.getElementById('chat-panel').style.width = val + 'px';
+    document.getElementById('edit-chat-width').value = val;
+    document.getElementById('val-chat-width').textContent = val + 'px';
+  }
+}
+function onResizeV(e) {
+  const delta = e.clientY - resizeStart;
+  const val = Math.max(60, Math.min(400, resizeOrig + delta));
+  document.getElementById('bottom-panel').style.height = val + 'px';
+  document.getElementById('edit-panel-height').value = val;
+  document.getElementById('val-panel-height').textContent = val + 'px';
+}
+function stopResize() {
+  document.removeEventListener('mousemove', onResize);
+  document.removeEventListener('mousemove', onResizeV);
+  document.removeEventListener('mouseup', stopResize);
+  document.querySelectorAll('.resize-handle,.resize-handle-v').forEach(h => h.classList.remove('active'));
+}
+
+// Edit panel
+function toggleEditPanel() {
+  document.getElementById('edit-panel').classList.toggle('open');
+}
+
+// Update layout from inputs
+function updateLayout() {
+  const aw = document.getElementById('edit-activity-width').value;
+  const sw = document.getElementById('edit-sidebar-width').value;
+  const cw = document.getElementById('edit-chat-width').value;
+  const ph = document.getElementById('edit-panel-height').value;
+  const sh = document.getElementById('edit-status-height').value;
+  const cp = document.getElementById('edit-chat-position').value;
+  const pp = document.getElementById('edit-panel-position').value;
+
+  document.querySelector('.activity-bar').style.width = aw + 'px';
+  document.querySelector('.sidebar').style.width = sw + 'px';
+  document.getElementById('chat-panel').style.width = cw + 'px';
+  document.getElementById('bottom-panel').style.height = ph + 'px';
+  document.querySelector('.statusbar').style.height = sh + 'px';
+
+  document.getElementById('val-activity-width').textContent = aw + 'px';
+  document.getElementById('val-sidebar-width').textContent = sw + 'px';
+  document.getElementById('val-chat-width').textContent = cw + 'px';
+  document.getElementById('val-panel-height').textContent = ph + 'px';
+  document.getElementById('val-status-height').textContent = sh + 'px';
+
+  // Chat position
+  const chat = document.getElementById('chat-panel');
+  const editorRow = document.querySelector('.editor-row');
+  if (cp === 'left') {
+    editorRow.insertBefore(chat, editorRow.firstChild);
+    chat.style.borderLeft = 'none';
+    chat.style.borderRight = '1px solid var(--border)';
+  } else {
+    editorRow.appendChild(chat);
+    chat.style.borderRight = 'none';
+    chat.style.borderLeft = '1px solid var(--border)';
+  }
+}
+
+function updateTheme() {
+  const theme = document.getElementById('edit-theme').value;
+  const root = document.documentElement;
+  if (theme === 'light') {
+    root.style.setProperty('--bg','#ffffff');
+    root.style.setProperty('--bg2','#f6f8fa');
+    root.style.setProperty('--bg3','#f0f2f5');
+    root.style.setProperty('--border','#d0d7de');
+    root.style.setProperty('--text','#1f2328');
+    root.style.setProperty('--muted','#656d76');
+  } else {
+    root.style.setProperty('--bg','#0d1117');
+    root.style.setProperty('--bg2','#161b22');
+    root.style.setProperty('--bg3','#12171f');
+    root.style.setProperty('--border','#30363d');
+    root.style.setProperty('--text','#e6edf3');
+    root.style.setProperty('--muted','#8b949e');
+  }
+}
+
+function resetLayout() {
+  document.getElementById('edit-activity-width').value = 44;
+  document.getElementById('edit-sidebar-width').value = 260;
+  document.getElementById('edit-chat-width').value = 400;
+  document.getElementById('edit-panel-height').value = 160;
+  document.getElementById('edit-status-height').value = 22;
+  document.getElementById('edit-chat-position').value = 'right';
+  updateLayout();
+}
+
+function exportHTML() {
+  const html = document.documentElement.outerHTML;
+  navigator.clipboard.writeText(html).then(() => {
+    alert('HTML 已复制到剪贴板！');
+  });
+}
+
+// Initialize
+updateLayout();
+</script>
+</body>
+</html>
