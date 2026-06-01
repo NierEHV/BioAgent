@@ -34,8 +34,20 @@ export function AppShell() {
   const [skillsConfigOpen, setSkillsConfigOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeActivity, setActiveActivity] = useState<ActivityId>("files");
+  const [allSessions, setAllSessions] = useState<SessionInfo[]>([]);
   const chatInputRef = useRef<ChatInputHandle | null>(null);
   const topBarRef = useRef<HTMLDivElement>(null);
+
+  // Fetch sessions for ChatPanel dropdown
+  useEffect(() => {
+    fetch("/api/sessions")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.sessions) setAllSessions(d.sessions);
+        else if (Array.isArray(d)) setAllSessions(d);
+      })
+      .catch(() => {});
+  }, [refreshKey]);
 
 
   // Branch navigator state — populated by ChatWindow via onBranchDataChange
@@ -435,13 +447,11 @@ export function AppShell() {
               session={selectedSession}
               newSessionCwd={effectiveNewSessionCwd}
               sessionKey={sessionKey}
-              sessions={[]}
+              sessions={allSessions}
+              onSelectSession={handleSelectSession}
               onNewSession={() => {
-                if (selectedSession?.cwd) {
-                  handleNewSession("", selectedSession.cwd);
-                } else if (activeCwd) {
-                  handleNewSession("", activeCwd);
-                }
+                const cwd = selectedSession?.cwd || activeCwd;
+                if (cwd) handleNewSession("", cwd);
               }}
               modelsRefreshKey={modelsRefreshKey}
               chatInputRef={chatInputRef}
