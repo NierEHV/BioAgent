@@ -448,6 +448,7 @@ export function AppShell() {
               newSessionCwd={effectiveNewSessionCwd}
               sessionKey={sessionKey}
               sessions={allSessions}
+              projectCwd={selectedSession?.cwd ?? newSessionCwd ?? activeCwd}
               onSelectSession={handleSelectSession}
               onNewSession={() => {
                 const cwd = selectedSession?.cwd || activeCwd;
