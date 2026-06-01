@@ -11,6 +11,7 @@ import { TabBar, type Tab } from "./TabBar";
 import { ModelsConfig } from "./ModelsConfig";
 import { SkillsConfig } from "./SkillsConfig";
 import { BranchNavigator } from "./BranchNavigator";
+import { ActivityBar, type ActivityId } from "./ActivityBar";
 import { useTheme } from "@/hooks/useTheme";
 import { useLanguage } from "@/hooks/useLanguage";
 import LanguageSwitch from "./LanguageSwitch";
@@ -34,6 +35,7 @@ export function AppShell() {
   const [modelsRefreshKey, setModelsRefreshKey] = useState(0);
   const [skillsConfigOpen, setSkillsConfigOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [activeActivity, setActiveActivity] = useState<ActivityId>("files");
   const chatInputRef = useRef<ChatInputHandle | null>(null);
   const topBarRef = useRef<HTMLDivElement>(null);
   const rightPanelRef = useRef<HTMLDivElement>(null);
@@ -366,6 +368,9 @@ export function AppShell() {
         }}
       />
 
+
+      {/* ── Activity Bar (#1) ── */}
+      <ActivityBar active={activeActivity} onChange={setActiveActivity} />
       {/* Left sidebar */}
       <div
         className={`sidebar-container${sidebarOpen ? " sidebar-open" : " sidebar-closed"}`}

@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BioAgent 布局 — VS Code 风格</title>
+<style>
+  :root {
+    --bg:#0d1117; --bg2:#161b22; --bg3:#12171f; --border:#30363d; --text:#e6edf3;
+    --muted:#8b949e; --accent:#58a6ff; --green:#3fb950; --orange:#d29922; --red:#f85149;
+    --activity-width:44px; --sidebar-width:260px; --panel-height:180px; --status-height:22px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#000;color:var(--text);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+
+  /* ── Window ── */
+  .window{width:1100px;height:700px;margin:20px auto;background:var(--bg);border:1px solid var(--border);border-radius:8px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 16px 64px rgba(0,0,0,.6)}
+  .titlebar{display:flex;align-items:center;height:32px;padding:0 12px;background:#1c2333;border-bottom:1px solid var(--border);flex-shrink:0}
+  .titlebar .dots{display:flex;gap:6px}
+  .titlebar .dots span{width:11px;height:11px;border-radius:50%}
+  .titlebar .dots .r{background:#ff5f57}.titlebar .dots .y{background:#febc2e}.titlebar .dots .g{background:#28c840}
+  .titlebar .title{flex:1;text-align:center;font-size:11px;color:var(--muted)}
+
+  /* ── Main Row ── */
+  .main-row{flex:1;display:flex;overflow:hidden}
+
+  /* ── Activity Bar ── */
+  .activity-bar{width:var(--activity-width);flex-shrink:0;background:var(--bg3);border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding-top:4px}
+  .activity-btn{width:36px;height:36px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--muted);cursor:pointer;position:relative;margin-bottom:2px;border:none;background:none;transition:color .12s}
+  .activity-btn:hover{color:var(--text)}
+  .activity-btn.active{color:var(--accent)}
+  .activity-btn.active::before{content:"";position:absolute;left:0;top:6px;bottom:6px;width:2px;background:var(--accent);border-radius:0 2px 2px 0}
+  .activity-spacer{flex:1}
+  .activity-bottom{display:flex;flex-direction:column;align-items:center;padding-bottom:6px}
+
+  /* ── Sidebar ── */
+  .sidebar{width:var(--sidebar-width);flex-shrink:0;background:var(--bg3);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+  .sidebar-header{padding:8px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);flex-shrink:0}
+  .sidebar-header .section-name{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+  .sidebar-header .actions{display:flex;gap:4px}
+  .sidebar-header .actions button{width:22px;height:22px;border:none;background:none;color:var(--muted);cursor:pointer;border-radius:4px;font-size:14px;display:flex;align-items:center;justify-content:center}
+  .sidebar-header .actions button:hover{background:var(--bg2);color:var(--text)}
+  .sidebar-scroll{flex:1;overflow-y:auto;padding:4px 0}
+
+  /* Project selector */
+  .project-selector{padding:4px 10px}
+  .project-selector select{width:100%;padding:4px 6px;background:var(--bg);border:1px solid var(--border);color:var(--text);font-size:11px;border-radius:4px}
+
+  /* File tree */
+  .file-tree{font-size:11px;font-family:"Cascadia Code",monospace;line-height:1.9;padding:2px 0}
+  .file-row{display:flex;align-items:center;gap:4px;padding:1px 10px;cursor:pointer;white-space:nowrap}
+  .file-row:hover{background:rgba(88,166,255,0.08)}
+  .file-row .icon{width:16px;text-align:center;flex-shrink:0;font-size:13px}
+  .file-row .name{overflow:hidden;text-overflow:ellipsis}
+  .file-row .name.dir{color:var(--accent)}
+  .file-row .name.h5ad{color:var(--green)}
+  .file-row .name.csv{color:var(--orange)}
+  .file-row .name.html{color:var(--purple)}
+
+  /* Container list */
+  .container-item{padding:6px 10px;border-bottom:1px solid var(--border);font-size:11px}
+  .container-item .top{display:flex;align-items:center;gap:6px}
+  .container-item .dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+  .container-item .dot.running{background:var(--green)}
+  .container-item .dot.exited{background:var(--red)}
+  .container-item .name{font-weight:600;font-size:11px}
+  .container-item .meta{font-size:9px;color:var(--muted);margin-top:2px;padding-left:13px}
+  .container-item .actions{display:flex;gap:4px;margin-top:4px;padding-left:13px}
+  .container-item .actions button{padding:2px 6px;border:1px solid var(--border);background:none;color:var(--muted);cursor:pointer;border-radius:3px;font-size:9px}
+  .container-item .actions button:hover{color:var(--text);border-color:var(--accent)}
+  .container-item .actions button.stop:hover{color:var(--red);border-color:var(--red)}
+
+  /* ── Editor (Chat) ── */
+  .editor{flex:1;display:flex;flex-direction:column;min-width:0}
+  .editor-tabs{display:flex;height:32px;background:var(--bg3);border-bottom:1px solid var(--border);overflow-x:auto;flex-shrink:0}
+  .editor-tab{display:flex;align-items:center;gap:4px;padding:0 14px;font-size:11px;color:var(--muted);border-right:1px solid var(--border);cursor:pointer;white-space:nowrap;background:var(--bg3)}
+  .editor-tab.active{color:var(--text);background:var(--bg);border-bottom:2px solid var(--accent)}
+  .editor-tab .close{font-size:10px;opacity:0;border:none;background:none;color:var(--muted);cursor:pointer}
+  .editor-tab:hover .close{opacity:1}
+  .editor-tab .dot{width:8px;height:8px;border-radius:50%}
+  .editor-content{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
+
+  /* Chat messages */
+  .msg{max-width:85%}
+  .msg.user{align-self:flex-end}
+  .msg.user .bubble{background:#1a3a5c;padding:8px 12px;border-radius:10px 10px 2px 10px;font-size:12px;line-height:1.6}
+  .msg.agent .bubble{background:var(--bg2);border:1px solid var(--border);padding:8px 12px;border-radius:10px 10px 10px 2px;font-size:12px;line-height:1.6}
+  .msg.agent .bubble code{background:#0d1117;padding:1px 4px;border-radius:3px;font-size:11px;color:var(--accent)}
+
+  /* Inline QC card */
+  .qc-inline{margin:8px 0;padding:6px 10px;background:#0d2818;border:1px solid var(--green);border-radius:6px;font-size:11px}
+  .qc-inline .gate{display:flex;align-items:center;gap:4px;padding:2px 0}
+  .qc-inline .gate .dot{width:5px;height:5px;border-radius:50%}
+  .qc-inline .gate .dot.pass{background:var(--green)}
+  .qc-inline .gate .dot.warn{background:var(--orange)}
+
+  /* Chat input */
+  .chat-input-area{display:flex;gap:8px;padding:8px 12px;border-top:1px solid var(--border);background:var(--bg3);flex-shrink:0}
+  .chat-input{flex:1;padding:6px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;font-family:inherit}
+  .chat-input::placeholder{color:var(--muted)}
+
+  /* ── Bottom Panel ── */
+  .panel{height:var(--panel-height);flex-shrink:0;background:var(--bg3);border-top:1px solid var(--border);display:flex;flex-direction:column}
+  .panel-tabs{display:flex;height:28px;background:var(--bg3);border-bottom:1px solid var(--border);align-items:center;flex-shrink:0}
+  .panel-tab{padding:2px 12px;font-size:10px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;display:flex;align-items:center;gap:4px}
+  .panel-tab.active{color:var(--text);border-bottom-color:var(--accent)}
+  .panel-content{flex:1;overflow-y:auto;padding:8px 12px;font-family:"Cascadia Code",monospace;font-size:10px;line-height:1.7;color:var(--muted)}
+  .panel-content .log-line.agent{color:var(--accent)}
+  .panel-content .log-line.qc-pass{color:var(--green)}
+  .panel-content .log-line.qc-warn{color:var(--orange)}
+  .panel-content .log-line.qc-fail{color:var(--red)}
+  .panel-content .log-line.stderr{color:var(--red)}
+
+  /* ── Status Bar ── */
+  .statusbar{display:flex;align-items:center;height:var(--status-height);padding:0 8px;background:var(--accent);font-size:11px;flex-shrink:0;gap:12px}
+  .status-item{color:rgba(0,0,0,.75);display:flex;align-items:center;gap:3px}
+  .status-item.warn{color:rgba(180,80,0,.9)}
+
+  /* ── Settings Panel (flyout) ── */
+  .settings-flyout{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:20px 24px;width:420px;box-shadow:0 16px 48px rgba(0,0,0,.6);z-index:500}
+  .settings-flyout h3{font-size:14px;margin-bottom:14px}
+  .field{margin-bottom:12px}
+  .field label{display:block;font-size:10px;color:var(--muted);margin-bottom:3px;text-transform:uppercase;letter-spacing:.5px}
+  .field input{width:100%;padding:6px 8px;background:var(--bg2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px;font-family:monospace}
+  .field .hint{font-size:9px;color:var(--muted);margin-top:2px}
+  .field .test-result{font-size:10px;margin-top:3px}
+  .field .test-result.ok{color:var(--green)}
+  .field .test-result.fail{color:var(--red)}
+  .btn-row{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+  .btn-row button{padding:6px 14px;border-radius:4px;font-size:11px;cursor:pointer}
+  .btn-row .btn-primary{background:var(--accent);color:#000;border:none;font-weight:600}
+  .btn-row .btn-secondary{background:none;border:1px solid var(--border);color:var(--text)}
+
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:499}
+</style>
+</head>
+<body>
+
+<div style="position:relative">
+
+<!-- Overlay for settings -->
+<div class="overlay" onclick="this.nextElementSibling.style.display='none';this.style.display='none'" style="display:none" id="overlay"></div>
+<div class="settings-flyout" style="display:none" id="settingsFlyout">
+  <h3>⚙️ 网络代理设置</h3>
+  <div class="field">
+    <label>HTTP 代理</label>
+    <input value="http://127.0.0.1:65532" placeholder="例: http://127.0.0.1:7890">
+    <div class="hint">Docker Hub / quay.io 搜索通过此代理</div>
+  </div>
+  <div class="field">
+    <label>HTTPS 代理</label>
+    <input value="http://127.0.0.1:65532" placeholder="通常与 HTTP 代理相同">
+  </div>
+  <div class="field">
+    <label>不使用代理的地址</label>
+    <input value="localhost,127.0.0.1,*.local" placeholder="逗号分隔">
+  </div>
+  <div class="field">
+    <div class="test-result ok">✅ Docker Hub 可达 (234ms) &nbsp; ✅ quay.io 可达 (189ms)</div>
+  </div>
+  <div class="btn-row">
+    <button class="btn-secondary" onclick="document.getElementById('settingsFlyout').style.display='none';document.getElementById('overlay').style.display='none'">取消</button>
+    <button class="btn-secondary">测试连接</button>
+    <button class="btn-primary">保存</button>
+  </div>
+</div>
+
+<!-- Window -->
+<div class="window">
+  <!-- Title Bar -->
+  <div class="titlebar">
+    <div class="dots"><span class="r"></span><span class="y"></span><span class="g"></span></div>
+    <div class="title">🧬 BioAgent — scrna-lung-tme</div>
+  </div>
+
+  <!-- Main Row -->
+  <div class="main-row">
+
+    <!-- Activity Bar -->
+    <div class="activity-bar">
+      <button class="activity-btn active" title="文件浏览器" onclick="switchActivity('files')">📁</button>
+      <button class="activity-btn" title="搜索" onclick="switchActivity('search')">🔍</button>
+      <button class="activity-btn" title="容器管理" onclick="switchActivity('containers')">🐳</button>
+      <div class="activity-spacer"></div>
+      <div class="activity-bottom">
+        <button class="activity-btn" title="设置" onclick="document.getElementById('settingsFlyout').style.display='block';document.getElementById('overlay').style.display='block'">⚙️</button>
+      </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <!-- Project Selector -->
+      <div class="project-selector">
+        <select>
+          <option>🧬 scrna-lung-tme</option>
+          <option>🧬 pbmc-test</option>
+          <option>🧬 bulk-rna-test</option>
+        </select>
+      </div>
+
+      <!-- Files View (default active) -->
+      <div id="sidebar-files">
+        <div class="sidebar-header">
+          <span class="section-name">📁 文件浏览器</span>
+          <div class="actions">
+            <button title="新建文件">+</button>
+            <button title="刷新">↻</button>
+          </div>
+        </div>
+        <div class="sidebar-scroll">
+          <div class="file-tree">
+            <div class="file-row"><span class="icon">📂</span><span class="name dir">raw/</span></div>
+            <div class="file-row" style="padding-left:24px"><span class="icon">🧬</span><span class="name h5ad">pbmc3k.h5ad</span></div>
+            <div class="file-row" style="padding-left:24px"><span class="icon">📊</span><span class="name csv">metadata.csv</span></div>
+            <div class="file-row"><span class="icon">📂</span><span class="name dir">intermediate/</span></div>
+            <div class="file-row" style="padding-left:24px"><span class="icon">🧬</span><span class="name h5ad">qc_filtered.h5ad</span></div>
+            <div class="file-row" style="padding-left:24px"><span class="icon">🧬</span><span class="name h5ad">normalized.h5ad</span></div>
+            <div class="file-row"><span class="icon">📂</span><span class="name dir">output/</span></div>
+            <div class="file-row" style="padding-left:24px"><span class="icon">📊</span><span class="name csv">de_results.csv</span></div>
+            <div class="file-row" style="padding-left:24px"><span class="icon">📄</span><span class="name html">report.html</span></div>
+            <div class="file-row" style="padding-left:24px"><span class="icon">🖼️</span><span class="name">umap_clusters.png</span></div>
+            <div class="file-row"><span class="icon">📄</span><span class="name">project.yml</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Containers View (hidden by default) -->
+      <div id="sidebar-containers" style="display:none">
+        <div class="sidebar-header">
+          <span class="section-name">🐳 容器 (2 running)</span>
+          <div class="actions">
+            <button title="全部停止">⏹</button>
+          </div>
+        </div>
+        <div class="sidebar-scroll">
+          <div class="container-item">
+            <div class="top">
+              <span class="dot running"></span>
+              <span class="name">scrna-qc-001</span>
+            </div>
+            <div class="meta">bioagent-scrna · 1.2GB RAM · 运行了 12min</div>
+            <div class="actions">
+              <button>📋 日志</button>
+              <button>⚡ exec</button>
+              <button class="stop">⏹ 停止</button>
+            </div>
+          </div>
+          <div class="container-item">
+            <div class="top">
+              <span class="dot running"></span>
+              <span class="name">fastqc-batch</span>
+            </div>
+            <div class="meta">staphb/fastqc · 679MB · 运行了 3min</div>
+            <div class="actions">
+              <button>📋 日志</button>
+              <button class="stop">⏹ 停止</button>
+            </div>
+          </div>
+          <div class="container-item" style="opacity:.5">
+            <div class="top">
+              <span class="dot exited"></span>
+              <span class="name">bulk-rna-test</span>
+            </div>
+            <div class="meta">已停止 · 2小时前</div>
+            <div class="actions">
+              <button>🔄 重启</button>
+              <button class="stop">🗑 删除</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Editor Area = Chat -->
+    <div class="editor">
+      <!-- Editor Tabs (open chat sessions) -->
+      <div class="editor-tabs">
+        <span class="editor-tab active">
+          <span class="dot" style="background:var(--accent)"></span> QC 分析
+          <button class="close">✕</button>
+        </span>
+        <span class="editor-tab">
+          <span class="dot" style="background:var(--green)"></span> 差异表达
+          <button class="close">✕</button>
+        </span>
+        <span class="editor-tab" style="opacity:.5">
+          <span class="dot" style="background:var(--border)"></span> 初始设置
+          <button class="close">✕</button>
+        </span>
+      </div>
+
+      <!-- Chat Messages -->
+      <div class="editor-content">
+        <div class="msg agent">
+          <div class="bubble">
+            🧠 已理解你的分析需求。按照 <code>7步推理框架</code>：
+            <br><br>
+            <strong>1. 科学问题</strong>：鉴定 PBMC 3k 数据中的免疫细胞亚群
+            <br>
+            <strong>2. 数据评估</strong>：2700细胞 × 32738基因，h5ad格式
+            <br>
+            <strong>3. 方案</strong>：Scanpy标准QC管线
+            <br><br>
+            <code>🔧 docker_exec start_container bioagent-scrna</code>
+          </div>
+        </div>
+
+        <!-- Inline QC Report -->
+        <div class="qc-inline">
+          <div style="font-weight:600;margin-bottom:4px">✅ scrna-qc — PASS</div>
+          <div class="gate"><span class="dot pass"></span> 基因数: median 817/cell</div>
+          <div class="gate"><span class="dot pass"></span> UMIs: median 2197/cell</div>
+          <div class="gate"><span class="dot warn"></span> pctMT: 2.03% (阈值20%)</div>
+        </div>
+
+        <div class="msg agent">
+          <div class="bubble">
+            QC完成！2700个细胞中保留了2698个(99.9%)。数据质量良好，可以继续归一化。
+          </div>
+        </div>
+      </div>
+
+      <!-- Chat Input -->
+      <div class="chat-input-area">
+        <input class="chat-input" placeholder="输入分析指令..." disabled>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Panel -->
+  <div class="panel">
+    <div class="panel-tabs">
+      <span class="panel-tab active">📋 终端</span>
+      <span class="panel-tab">🐳 docker logs</span>
+      <span class="panel-tab">📤 输出</span>
+    </div>
+    <div class="panel-content">
+      <div class="log-line agent">[BioAgent] 开始执行: scrna-qc</div>
+      <div class="log-line">$ docker run -d --name scrna-qc-001 -v /data:/data bioagent-scrna sleep infinity</div>
+      <div class="log-line agent">Container started: scrna-qc-001 (3e5ad8335c67)</div>
+      <div class="log-line">$ docker exec scrna-qc-001 python -c "import scanpy..."</div>
+      <div class="log-line qc-pass">✅ Exit Code: 0 | Duration: 2.3s</div>
+      <div class="log-line qc-pass">Cells after filter: 2698 (99.9%)</div>
+      <div class="log-line agent">[BioAgent] scrna-qc completed — QC: pass (3/3 gates)</div>
+    </div>
+  </div>
+
+  <!-- Status Bar -->
+  <div class="statusbar">
+    <span class="status-item">🐳 2 containers</span>
+    <span class="status-item">📊 0% / 1.0M ctx</span>
+    <span class="status-item" style="margin-left:auto">DeepSeek V4 Pro</span>
+    <span class="status-item">$0.0004</span>
+    <span class="status-item" style="color:rgba(0,0,0,.5)">代理: 127.0.0.1:65532 ✅</span>
+  </div>
+</div>
+
+</div>
+
+<script>
+function switchActivity(view) {
+  // Update buttons
+  document.querySelectorAll('.activity-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  // Show/hide sidebar views
+  const files = document.getElementById('sidebar-files');
+  const containers = document.getElementById('sidebar-containers');
+  if (view === 'containers') {
+    files.style.display = 'none';
+    containers.style.display = 'block';
+  } else {
+    files.style.display = 'block';
+    containers.style.display = 'none';
+  }
+}
+</script>
+
+</body>
+</html>

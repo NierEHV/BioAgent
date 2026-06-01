@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BioAgent 布局插槽 — VS Code 风格</title>
+<style>
+  :root {
+    --bg:#0d1117; --bg2:#161b22; --bg3:#12171f; --border:#30363d; --text:#e6edf3;
+    --muted:#8b949e; --accent:#58a6ff; --green:#3fb950; --orange:#d29922; --red:#f85149;
+    --slot-bg:rgba(88,166,255,0.06); --slot-border:rgba(88,166,255,0.3);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#000;color:var(--text);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+
+  .window{width:1200px;height:750px;margin:16px auto;background:var(--bg);border:1px solid var(--border);border-radius:8px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 16px 64px rgba(0,0,0,.6)}
+  .titlebar{display:flex;align-items:center;height:32px;padding:0 12px;background:#1c2333;border-bottom:1px solid var(--border);flex-shrink:0}
+  .titlebar .dots{display:flex;gap:6px;margin-right:12px}
+  .titlebar .dots span{width:11px;height:11px;border-radius:50%}
+  .titlebar .dots .r{background:#ff5f57}.titlebar .dots .y{background:#febc2e}.titlebar .dots .g{background:#28c840}
+  .titlebar .title{flex:1;text-align:center;font-size:11px;color:var(--muted)}
+
+  .main-row{flex:1;display:flex;overflow:hidden}
+
+  /* Slot numbering */
+  .slot{position:relative;display:flex;flex-direction:column}
+  .slot-num{position:absolute;top:4px;left:4px;z-index:10;background:var(--accent);color:#000;width:20px;height:20px;border-radius:50%;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;opacity:.85}
+  .slot-label{font-size:9px;color:var(--accent);position:absolute;top:4px;left:28px;z-index:10;font-weight:600;white-space:nowrap;opacity:.7}
+  .slot-content{flex:1;overflow:hidden;display:flex;flex-direction:column;padding-top:22px}
+  .slot-empty{flex:1;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:10px;border:1px dashed var(--border);border-radius:4px;margin:4px;background:var(--slot-bg)}
+
+  /* ===== Slot 1: Activity Bar ===== */
+  .activity-bar{width:44px;flex-shrink:0;background:var(--bg3);border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:24px 0 4px}
+  .activity-icon{width:34px;height:34px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--muted);cursor:pointer;margin-bottom:2px;border:none;background:none;opacity:.4}
+  .activity-icon.active{color:var(--accent);opacity:1}
+  .activity-spacer{flex:1}
+  .activity-bottom{display:flex;flex-direction:column;align-items:center}
+
+  /* ===== Slot 2: Primary Sidebar ===== */
+  .primary-sidebar{width:240px;flex-shrink:0;background:var(--bg3);border-right:1px solid var(--border);display:flex;flex-direction:column}
+
+  /* ===== Slot 3: Secondary Sidebar (VS Code's "auxiliary" sidebar on the right) ===== */
+  .secondary-sidebar{width:240px;flex-shrink:0;background:var(--bg3);border-left:1px solid var(--border)}
+
+  /* ===== Slot 4: Editor Area Header Tabs ===== */
+  .editor-tabs-area{height:32px;background:var(--bg3);border-bottom:1px solid var(--border);display:flex;align-items:center;overflow-x:auto;flex-shrink:0}
+  .editor-tab{display:flex;align-items:center;gap:4px;padding:0 14px;font-size:10px;color:var(--muted);border-right:1px solid var(--border);cursor:pointer;white-space:nowrap;background:var(--bg3);height:100%}
+  .editor-tab.active{color:var(--text);background:var(--bg);border-bottom:2px solid var(--accent)}
+
+  /* ===== Slot 5: Editor Main Content ===== */
+  .editor-main{flex:1;display:flex;flex-direction:column;min-width:0}
+  .editor-area{flex:1;display:flex;overflow:hidden}
+
+  /* ===== Split Editor ===== */
+  .editor-left{flex:1;display:flex;flex-direction:column;min-width:0}
+  .editor-right{flex:1;display:flex;flex-direction:column;min-width:0;border-left:1px solid var(--border)}
+
+  /* ===== Slot 8: Bottom Panel ===== */
+  .bottom-panel{height:160px;flex-shrink:0;background:var(--bg3);border-top:1px solid var(--border);display:flex;flex-direction:column}
+  .panel-tabs{display:flex;height:26px;background:var(--bg3);border-bottom:1px solid var(--border);align-items:center;flex-shrink:0}
+  .panel-tab{padding:2px 12px;font-size:10px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent}
+  .panel-tab.active{color:var(--text);border-bottom-color:var(--accent)}
+  .panel-toolbar{display:flex;align-items:center;gap:6px;margin-left:auto;padding-right:8px}
+  .panel-toolbar button{width:20px;height:20px;border:none;background:none;color:var(--muted);cursor:pointer;font-size:12px;border-radius:3px}
+  .panel-toolbar button:hover{background:var(--bg2)}
+
+  /* ===== Slot 9: Status Bar ===== */
+  .statusbar{display:flex;align-items:center;height:22px;padding:0 8px;background:var(--accent);font-size:10px;flex-shrink:0;gap:0}
+  .status-left{display:flex;align-items:center;gap:12px}
+  .status-right{margin-left:auto;display:flex;align-items:center;gap:12px}
+  .status-item{color:rgba(0,0,0,.75);cursor:pointer;white-space:nowrap;font-size:10px}
+  .status-item:hover{color:#000}
+
+  /* ===== Slot 10: Hover/Minimap ===== */
+  .minimap-area{width:40px;flex-shrink:0;background:var(--bg2);border-left:1px solid var(--border)}
+
+  /* ===== Slot 11: Breadcrumbs ===== */
+  .breadcrumbs{height:22px;background:var(--bg3);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 10px;font-size:10px;color:var(--muted);flex-shrink:0}
+
+  /* ===== Slot 12: Editor toolbar / actions ===== */
+  .editor-toolbar{height:28px;background:var(--bg3);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 8px;gap:4px;flex-shrink:0}
+  .editor-toolbar button{height:20px;padding:0 6px;border:1px solid var(--border);background:none;color:var(--muted);border-radius:3px;font-size:10px;cursor:pointer}
+
+  .legend{display:flex;flex-wrap:wrap;gap:8px;padding:8px 12px;font-size:10px}
+  .legend-item{display:flex;align-items:center;gap:4px;background:var(--bg2);padding:4px 8px;border-radius:4px;border:1px solid var(--border);cursor:pointer;transition:border-color .2s}
+  .legend-item:hover{border-color:var(--accent)}
+  .legend-item .num{background:var(--accent);color:#000;width:16px;height:16px;border-radius:50%;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center}
+  .legend-item .desc{max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+  .muted-note{font-size:9px;color:var(--muted);margin-top:4px}
+</style>
+</head>
+<body>
+
+<div class="window">
+  <!-- Title Bar -->
+  <div class="titlebar">
+    <div class="dots"><span class="r"></span><span class="y"></span><span class="g"></span></div>
+    <div class="title">🧬 BioAgent — 插槽编号布局 (VS Code 风格)</div>
+  </div>
+
+  <!-- Main Row -->
+  <div class="main-row">
+
+    <!-- ═══════════ SLOT 1: Activity Bar ═══════════ -->
+    <div class="slot activity-bar">
+      <div class="slot-num">1</div>
+      <div class="slot-label">Activity Bar</div>
+      <div style="height:18px"></div>
+      <div class="activity-icon active">A</div>
+      <div class="activity-icon">B</div>
+      <div class="activity-icon">C</div>
+      <div class="activity-icon">D</div>
+      <div class="activity-spacer"></div>
+      <div class="activity-bottom">
+        <div class="activity-icon">⚙</div>
+      </div>
+    </div>
+
+    <!-- ═══════════ SLOT 2: Primary Sidebar ═══════════ -->
+    <div class="slot primary-sidebar">
+      <div class="slot-num">2</div>
+      <div class="slot-label">Primary Sidebar</div>
+      <div class="slot-content">
+        <div class="slot-empty">← 由 Activity Bar (#1) 切换内容</div>
+      </div>
+    </div>
+
+    <!-- ═══════════ Editor Area ═══════════ -->
+    <div class="editor-main">
+
+      <!-- ═══════════ SLOT 4: Tab Bar ═══════════ -->
+      <div class="slot editor-tabs-area">
+        <div class="slot-num">4</div>
+        <div class="slot-label">Editor Tabs</div>
+        <div style="display:flex;align-items:center;padding-left:32px;height:100%">
+          <span class="editor-tab active">Tab A</span>
+          <span class="editor-tab">Tab B</span>
+          <span class="editor-tab">Tab C</span>
+        </div>
+      </div>
+
+      <!-- ═══════════ SLOT 11: Breadcrumbs ═══════════ -->
+      <div class="slot breadcrumbs">
+        <div class="slot-num">11</div>
+        <div class="slot-label" style="color:var(--muted)">Breadcrumbs</div>
+        <div style="padding-left:28px">project / pipeline / qc-analysis</div>
+      </div>
+
+      <!-- ═══════════ SLOT 12: Editor Toolbar ═══════════ -->
+      <div class="slot editor-toolbar">
+        <div class="slot-num">12</div>
+        <div class="slot-label" style="color:var(--muted)">Toolbar</div>
+        <div style="display:flex;gap:4px;padding-left:32px">
+          <button>▶ 运行</button><button>⏸ 暂停</button><button>📊 查看结果</button><button>📥 导出</button>
+        </div>
+      </div>
+
+      <!-- ═══════════ Editor Split Area ═══════════ -->
+      <div class="editor-area">
+
+        <!-- ═══════════ SLOT 5: Editor Left ═══════════ -->
+        <div class="slot editor-left">
+          <div class="slot-num">5</div>
+          <div class="slot-label">Main Editor</div>
+          <div class="slot-content">
+            <div class="slot-empty">主编辑区 (可左右拆分)</div>
+          </div>
+        </div>
+
+        <!-- ═══════════ SLOT 6: Editor Right (split) ═══════════ -->
+        <div class="slot editor-right">
+          <div class="slot-num">6</div>
+          <div class="slot-label">Split Editor</div>
+          <div class="slot-content">
+            <div class="slot-empty">拆分编辑区 (可选)</div>
+          </div>
+        </div>
+
+        <!-- ═══════════ SLOT 10: Minimap ═══════════ -->
+        <div class="slot minimap-area">
+          <div class="slot-num" style="font-size:8px;width:16px;height:16px">10</div>
+          <div class="slot-label" style="font-size:8px">Mini</div>
+          <div class="slot-content">
+            <div class="slot-empty" style="writing-mode:vertical-rl;font-size:8px">预览</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════ SLOT 3: Secondary Sidebar (Right) ═══════════ -->
+    <div class="slot secondary-sidebar">
+      <div class="slot-num">3</div>
+      <div class="slot-label">Secondary Sidebar</div>
+      <div class="slot-content">
+        <div class="slot-empty">右侧辅助面板</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ═══════════ SLOT 8: Bottom Panel ═══════════ -->
+  <div class="slot bottom-panel">
+    <div class="slot-num">8</div>
+    <div class="slot-label">Panel (底部)</div>
+    <div style="padding-left:24px;display:flex;flex-direction:column;flex:1">
+      <div class="panel-tabs">
+        <span class="panel-tab active">面板 A</span>
+        <span class="panel-tab">面板 B</span>
+        <span class="panel-tab">面板 C</span>
+        <div class="panel-toolbar">
+          <button>×</button><button>↕</button>
+        </div>
+      </div>
+      <div class="slot-empty" style="flex:1;margin:4px">可拆分/堆叠的面板区域</div>
+    </div>
+  </div>
+
+  <!-- ═══════════ SLOT 9: Status Bar ═══════════ -->
+  <div class="slot statusbar">
+    <div class="slot-num" style="font-size:8px;width:16px;height:16px">9</div>
+    <div class="status-left" style="padding-left:24px">
+      <span class="status-item">🔵 状态项 A</span>
+      <span class="status-item">🔵 状态项 B</span>
+      <span class="status-item">🔵 状态项 C</span>
+    </div>
+    <div class="status-right">
+      <span class="status-item">状态项 D</span>
+      <span class="status-item">状态项 E</span>
+      <span class="status-item">状态项 F</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ LEGEND ═══════════ -->
+<div style="max-width:1200px;margin:0 auto;padding:16px">
+  <h2 style="font-size:16px;margin-bottom:10px;color:var(--text)">📋 插槽清单 — 点击高亮</h2>
+  <div class="legend" id="legend">
+    <div class="legend-item" onclick="highlight(1)">
+      <span class="num">1</span><span class="desc">Activity Bar — 左侧图标栏 (切换视图)</span>
+    </div>
+    <div class="legend-item" onclick="highlight(2)">
+      <span class="num">2</span><span class="desc">Primary Sidebar — 主侧栏 (文件树/容器/搜索)</span>
+    </div>
+    <div class="legend-item" onclick="highlight(3)">
+      <span class="num">3</span><span class="desc">Secondary Sidebar — 右侧辅助面板</span>
+    </div>
+    <div class="legend-item" onclick="highlight(4)">
+      <span class="num">4</span><span class="desc">Editor Tabs — 编辑器标签栏 (会话标签)</span>
+    </div>
+    <div class="legend-item" onclick="highlight(5)">
+      <span class="num">5</span><span class="desc">Main Editor — 主编辑区</span>
+    </div>
+    <div class="legend-item" onclick="highlight(6)">
+      <span class="num">6</span><span class="desc">Split Editor — 右侧拆分编辑区</span>
+    </div>
+    <div class="legend-item" onclick="highlight(10)">
+      <span class="num">10</span><span class="desc">Minimap — 右侧缩略预览</span>
+    </div>
+    <div class="legend-item" onclick="highlight(8)">
+      <span class="num">8</span><span class="desc">Panel — 底部面板 (终端/日志/输出)</span>
+    </div>
+    <div class="legend-item" onclick="highlight(9)">
+      <span class="num">9</span><span class="desc">Status Bar — 底部状态栏</span>
+    </div>
+    <div class="legend-item" onclick="highlight(11)">
+      <span class="num">11</span><span class="desc">Breadcrumbs — 面包屑导航</span>
+    </div>
+    <div class="legend-item" onclick="highlight(12)">
+      <span class="num">12</span><span class="desc">Editor Toolbar — 编辑器工具栏</span>
+    </div>
+  </div>
+
+  <div class="muted-note">
+    💡 点击上方编号可高亮对应区域。确定每个编号放什么功能后，我再逐一实现。
+  </div>
+</div>
+
+<script>
+function highlight(num) {
+  // Reset all
+  document.querySelectorAll('.slot').forEach(s => {
+    s.style.outline = 'none';
+    s.style.outlineOffset = '0';
+  });
+  document.querySelectorAll('.legend-item').forEach(i => i.style.borderColor = 'var(--border)');
+
+  // Highlight target
+  const targets = document.querySelectorAll('.slot');
+  for (const t of targets) {
+    const n = t.querySelector('.slot-num');
+    if (n && parseInt(n.textContent) === num) {
+      t.style.outline = '2px solid var(--green)';
+      t.style.outlineOffset = '-1px';
+      t.style.zIndex = '5';
+    }
+  }
+  const legends = document.querySelectorAll('.legend-item');
+  for (const l of legends) {
+    const n = l.querySelector('.num');
+    if (n && parseInt(n.textContent) === num) {
+      l.style.borderColor = 'var(--green)';
+    }
+  }
+}
+</script>
+
+</body>
+</html>
