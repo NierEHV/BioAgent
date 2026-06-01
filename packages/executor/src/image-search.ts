@@ -22,6 +22,11 @@ export function daysAgo(dateStr: string): number {
 export class ImageSearchService {
   private readonly dockerHubBase = "https://hub.docker.com/v2";
   private readonly quayBase = "https://quay.io/api/v1";
+  private proxyUrl: string | undefined;
+
+  constructor(proxyUrl?: string) {
+    this.proxyUrl = proxyUrl || process.env.HTTPS_PROXY || process.env.HTTP_PROXY || process.env.https_proxy || process.env.http_proxy;
+  }
 
   /**
    * 搜索 Docker Hub。
@@ -37,12 +42,24 @@ export class ImageSearchService {
     const pageSize = Math.min(params.limit, 100);
     const url = `${this.dockerHubBase}/search/repositories/?query=${encodeURIComponent(query)}&ordering=stars&page_size=${pageSize}`;
 
+    const fetchOptions: any = {
+      headers: { "Content-Type": "application/json" },
+      signal: AbortSignal.timeout(15000),
+    };
+
+    // Use proxy if configured
+    if (this.proxyUrl) {
+      try {
+        const { ProxyAgent } = await import("undici");
+        fetchOptions.dispatcher = new ProxyAgent(this.proxyUrl);
+      } catch {
+        // undici ProxyAgent not available, try without proxy
+      }
+    }
+
     let response: globalThis.Response;
     try {
-      response = await fetch(url, {
-        headers: { "Content-Type": "application/json" },
-        signal: AbortSignal.timeout(15000),
-      });
+      response = await fetch(url, fetchOptions);
     } catch {
       return []; // Network error — return empty
     }
