@@ -693,25 +693,6 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
             {t("error")}: {error}
           </div>
         )}
-        {!loading && !error && filteredSessions.length === 0 && (
-          <div style={{ padding: "16px 14px", color: "var(--text-muted)", fontSize: 12 }}>
-            {t("noSessions")}
-          </div>
-        )}
-        {sessionTree.map((node) => (
-          <SessionTreeItem
-            key={node.session.id}
-            node={node}
-            selectedSessionId={selectedSessionId}
-            onSelectSession={onSelectSession}
-            onRenamed={loadSessions}
-            onSessionDeleted={(id) => {
-              onSessionDeleted?.(id);
-              loadSessions();
-            }}
-            depth={0}
-          />
-        ))}
       </div>
 
       {/* New Project Modal */}
