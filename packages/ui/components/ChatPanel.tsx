@@ -11,6 +11,7 @@ interface ChatPanelProps {
   sessionKey: number;
   sessions?: SessionInfo[];
   projectCwd?: string | null;
+  width?: number;
   onSelectSession?: (session: SessionInfo) => void;
   onNewSession?: () => void;
   modelsRefreshKey?: number;
@@ -30,6 +31,7 @@ export function ChatPanel({
   sessionKey,
   sessions = [],
   projectCwd,
+  width = 400,
   onSelectSession,
   onNewSession,
   modelsRefreshKey,
@@ -76,7 +78,7 @@ export function ChatPanel({
   return (
     <div
       style={{
-        width: 400,
+        width,
         flexShrink: 0,
         borderLeft: "1px solid var(--border)",
         display: "flex",

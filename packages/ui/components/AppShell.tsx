@@ -12,6 +12,7 @@ import { ModelsConfig } from "./ModelsConfig";
 import { SkillsConfig } from "./SkillsConfig";
 import { BranchNavigator } from "./BranchNavigator";
 import { ActivityBar, type ActivityId } from "./ActivityBar";
+import { ResizeHandle } from "./ResizeHandle";
 import { useTheme } from "@/hooks/useTheme";
 import { useLanguage } from "@/hooks/useLanguage";
 import LanguageSwitch from "./LanguageSwitch";
@@ -35,6 +36,9 @@ export function AppShell() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeActivity, setActiveActivity] = useState<ActivityId>("files");
   const [allSessions, setAllSessions] = useState<SessionInfo[]>([]);
+  const [sidebarWidth, setSidebarWidth] = useState(260);
+  const [chatWidth, setChatWidth] = useState(400);
+  const [panelHeight, setPanelHeight] = useState(160);
   const chatInputRef = useRef<ChatInputHandle | null>(null);
   const topBarRef = useRef<HTMLDivElement>(null);
 
@@ -349,11 +353,17 @@ export function AppShell() {
           style={{
             background: "var(--bg-panel)", borderRight: "1px solid var(--border)",
             display: "flex", flexDirection: "column",
-            flexShrink: 0, width: 260, zIndex: 200,
+            flexShrink: 0, width: sidebarWidth, zIndex: 200,
           }}
         >
           {sidebarContent}
         </div>
+
+        {/* Resize: Sidebar */}
+        <ResizeHandle
+          direction="h"
+          onResize={(d) => setSidebarWidth((w) => Math.max(160, Math.min(500, w + d)))}
+        />
 
         {/* ── Center: Main Editor (#5) + Chat Panel (#3) ── */}
         <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
@@ -442,8 +452,15 @@ export function AppShell() {
               ) : null}
             </div>
 
+            {/* Resize: Chat Panel */}
+            <ResizeHandle
+              direction="h"
+              onResize={(d) => setChatWidth((w) => Math.max(280, Math.min(600, w - d)))}
+            />
+
             {/* Chat Panel (#3) — Secondary Sidebar */}
             <ChatPanel
+              width={chatWidth}
               session={selectedSession}
               newSessionCwd={effectiveNewSessionCwd}
               sessionKey={sessionKey}
@@ -466,8 +483,14 @@ export function AppShell() {
             />
           </div>
 
+          {/* Resize: Bottom Panel */}
+          <ResizeHandle
+            direction="v"
+            onResize={(d) => setPanelHeight((h) => Math.max(60, Math.min(400, h - d)))}
+          />
+
           {/* ── Bottom Panel (#8) — only under editor ── */}
-          <BottomPanel />
+          <BottomPanel height={panelHeight} />
         </div>
       </div>
 

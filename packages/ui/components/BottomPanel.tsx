@@ -4,7 +4,7 @@ import { useState } from "react";
 
 type PanelTab = "terminal" | "docker" | "output";
 
-export function BottomPanel() {
+export function BottomPanel({ height = 160 }: { height?: number }) {
   const [activeTab, setActiveTab] = useState<PanelTab>("output");
   const [collapsed, setCollapsed] = useState(false);
 
@@ -46,7 +46,7 @@ export function BottomPanel() {
   return (
     <div
       style={{
-        height: 160,
+        height: collapsed ? 24 : height,
         flexShrink: 0,
         background: "var(--bg-panel)",
         borderTop: "1px solid var(--border)",
